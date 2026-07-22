@@ -3607,6 +3607,16 @@ var qrcode = function() {
   "use strict";
   const KEY="kyarng27-camp-board-v2";
   const $=id=>document.getElementById(id);
+  // Field diagnostics: remember the last page error (surfaced on the version badge and in
+  // the FLASH warning detail), and wire the warning's Dismiss by delegation FIRST so it
+  // works even if some later wiring in this script fails on a device we can't reproduce.
+  let lastPageError="";
+  window.addEventListener("error",e=>{ try{ lastPageError=String(e.message||e.error||"error").slice(0,180); window.__campErr=lastPageError; }catch(x){} });
+  window.addEventListener("unhandledrejection",e=>{ try{ lastPageError=String((e.reason&&e.reason.message)||e.reason||"rejection").slice(0,180); window.__campErr=lastPageError; }catch(x){} });
+  document.addEventListener("click",e=>{
+    const t=e.target;
+    if(t && t.id==="flashWarnX"){ try{ flashWatchId=""; }catch(x){} const w=$("flashWarn"); if(w) w.classList.add("hide"); }
+  });
   const pad=n=>String(n).padStart(2,"0");
   const nowDTG=()=>{ const d=new Date(); return pad(d.getUTCDate())+pad(d.getUTCHours())+pad(d.getUTCMinutes())+"Z"; };
   const MON=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
@@ -5342,24 +5352,27 @@ var qrcode = function() {
   // Runs every tick regardless of what's on screen, and clears itself: the warning hides the
   // moment a server board carries the watched alert, and a watch expires after 10 minutes so a
   // warning can never stick around after the backend has been fixed.
+  // The warning may be VISIBLE only while there is affirmative evidence of a dropping
+  // backend: a server board newer than the send that demonstrably lacks the watched
+  // alert. Every ambiguous state — no watch, no sync, no fresh server answer yet —
+  // hides it, so no wedged variable or odd path can ever leave a stale warning up.
   function flashWatchTick(){
     const w=$("flashWarn"); if(!w) return;
-    if(!flashWatchId){ w.classList.add("hide"); return; }
-    if(!syncConnected) return; // no verdict without sync
-    if(syncLastApplyAt<=flashWatchAt) return; // wait for a server board newer than the send
-    const present=((syncBase&&syncBase.flashAlerts)||[]).some(x=>x&&x.id===flashWatchId);
-    if(present){ flashWatchId=""; w.classList.add("hide"); return; }
-    const age=Date.now()-flashWatchAt;
-    if(age>15000){
-      w.classList.remove("hide");
-      const why=$("flashWarnWhy");
-      if(why) why.textContent="alert …"+String(flashWatchId).slice(-4)+" sent "+flashAgeTxt(age)+" ago · server last answered "
-        +(syncLastApplyAt?flashAgeTxt(Date.now()-syncLastApplyAt)+" ago":"never")
-        +" · this board's link ends …"+String(syncUrl||"").replace(/\/exec.*$/,"").slice(-10)+"/exec";
+    const why=$("flashWarnWhy");
+    let evidence=false;
+    if(flashWatchId && syncConnected && syncLastApplyAt>flashWatchAt){
+      const present=((syncBase&&syncBase.flashAlerts)||[]).some(x=>x&&x.id===flashWatchId);
+      const age=Date.now()-flashWatchAt;
+      if(present || age>600000){ flashWatchId=""; }
+      else if(age>15000){
+        evidence=true;
+        if(why) why.textContent="alert …"+String(flashWatchId).slice(-4)+" sent "+flashAgeTxt(age)+" ago · server last answered "
+          +flashAgeTxt(Date.now()-syncLastApplyAt)+" ago · this board's link ends …"
+          +String(syncUrl||"").replace(/\/exec.*$/,"").slice(-10)+"/exec"+(lastPageError?" · page error: "+lastPageError:"");
+      }
     }
-    if(age>600000){ flashWatchId=""; w.classList.add("hide"); }
+    w.classList.toggle("hide",!evidence);
   }
-  (function(){ const x=$("flashWarnX"); if(x) x.addEventListener("click",()=>{ flashWatchId=""; $("flashWarn").classList.add("hide"); }); })();
   document.querySelectorAll(".flash-btn").forEach(b=>{
     b.addEventListener("click",()=>sendFlash(b.getAttribute("data-flash"), b.getAttribute("data-txt")));
   });
@@ -5371,7 +5384,7 @@ var qrcode = function() {
     sendFlash("ACCT","ACCOUNTABILITY — count your platoon and submit to TOC now");
     const fp=$("flashPanel"); if(fp&&fp.scrollIntoView) fp.scrollIntoView({behavior:"smooth",block:"start"});
   });
-  setInterval(()=>{ renderFlash(); flashWatchTick(); },1000);
+  setInterval(()=>{ try{ renderFlash(); }catch(e){} try{ flashWatchTick(); }catch(e){} },1000);
   $("addSch").addEventListener("click",()=>{ const s=curSched(); if(!s) return; s.push({time:"",activity:"",loc:"",status:"Upcoming"}); renderSchedule(); save(); });
 
   // platoon controls
@@ -6298,7 +6311,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.10"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.11"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;
@@ -6317,9 +6330,18 @@ var qrcode = function() {
     }catch(e){}
   }
   // tiny corner version badge — instantly answers "which version is this device running?"
+  // It doubles as an error beacon: any page error turns it red; tapping it shows the message.
   try{ var vb=document.createElement("span"); vb.textContent="v"+APP_VERSION;
-    vb.style.cssText="position:fixed;right:6px;bottom:4px;z-index:70;font:700 10px ui-monospace,monospace;color:#8a93a0;opacity:.75;pointer-events:none";
-    document.body.appendChild(vb); }catch(e){}
+    vb.style.cssText="position:fixed;right:6px;bottom:4px;z-index:70;font:700 10px ui-monospace,monospace;color:#8a93a0;opacity:.75";
+    document.body.appendChild(vb);
+    var flag=function(msg){ msg=String(msg||"error").slice(0,180); window.__campErr=msg;
+      vb.textContent="v"+APP_VERSION+" ⚠"; vb.style.color="#ff6b6b"; vb.style.opacity="1"; vb.style.pointerEvents="auto";
+      vb.title=msg; vb.style.cursor="pointer";
+      vb.onclick=function(){ alert("Page error (screenshot this for support):\n\n"+msg); }; };
+    if(window.__campErr) flag(window.__campErr);
+    window.addEventListener("error",function(e){ flag(e.message||e.error); });
+    window.addEventListener("unhandledrejection",function(e){ flag((e.reason&&e.reason.message)||e.reason); });
+  }catch(e){}
   check(); setInterval(check,300000); // on load, then every 5 minutes
   document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
 })();

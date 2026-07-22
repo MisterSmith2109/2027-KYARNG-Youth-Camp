@@ -906,6 +906,9 @@
         </table>
       </div>
       <button class="add-btn" id="addRoster">+ Add person</button>
+      <button class="add-btn" id="rosterImport">&#8613; Import roster CSV</button>
+      <input type="file" id="rosterImportFile" accept=".csv,text/csv,text/plain" class="hide">
+      <span class="roster-count" id="rosterImportNote"></span>
     </div>
   </div>
 
@@ -3651,7 +3654,7 @@ var qrcode = function() {
       const tomb=state._tomb[k]||{}, bt=(base._tomb&&base._tomb[k])||{};
       for(const id in bt) tomb[id]=Math.max(tomb[id]||0, bt[id]);
       for(const id in baseById){ if(!seen[id]) tomb[id]=now; } // deleted since base
-      for(const id in tomb){ if(now-tomb[id]>=86400000) delete tomb[id]; }
+      for(const id in tomb){ if(now-tomb[id]>=1209600000) delete tomb[id]; } // 14 days — keep in step with TOMB_TTL_MS in sync/Code.gs
       state._tomb[k]=tomb;
     });
     for(const sec in SYNC_SECTIONS){
@@ -5001,6 +5004,63 @@ var qrcode = function() {
   });
   $("rInAll").addEventListener("click",()=>{ const d=hhmmLocal(); state.roster.forEach(r=>{ if(r.status!=="Absent"&&r.status!=="Departed"){ r.status="In"; r.last=d; } }); renderRoster(); renderTiles(); save(); });
   $("rOutAll").addEventListener("click",()=>{ const d=hhmmLocal(); state.roster.forEach(r=>{ if(r.status!=="Absent"&&r.status!=="Departed"){ r.status="Out"; r.last=d; } }); renderRoster(); renderTiles(); save(); });
+
+  // ---------- roster CSV import: load the whole camp from the official manifest ----------
+  // Accepts a headered CSV (name / first+last name, group/platoon, role) or a plain
+  // headerless list (name[, group[, role]]). Names already on the roster are skipped,
+  // so re-importing an updated manifest only adds the new people.
+  function normRole(v){
+    v=String(v||"").toLowerCase();
+    if(/apsg/.test(v)) return "APSG";
+    if(/psg/.test(v)) return "PSG";
+    if(/staff|cadre|instructor|medic|nco|officer/.test(v)) return "Staff";
+    if(/support|admin|volunteer/.test(v)) return "Support";
+    return "Camper";
+  }
+  function importRosterCSV(txt){
+    const rows=parseCSV(txt).filter(r=>r&&r.join("").trim()!=="");
+    if(!rows.length) return {added:0,skipped:0,bad:true};
+    const H=rows[0].map(h=>String(h||"").toLowerCase().trim());
+    const used={};
+    const col=(...names)=>{ for(const n of names){ const i=H.findIndex((h,idx)=>!used[idx]&&h.indexOf(n)>-1); if(i>-1){ used[i]=1; return i; } } return -1; };
+    let iFirst=col("first name","first"), iLast=col("last name","last","surname");
+    let iName=col("full name","name of camper","camper name","participant","name");
+    let iGroup=col("platoon","group","unit","squad","company"),
+        iRole=col("role","type","category","position");
+    const hasHeader = iName>-1 || (iFirst>-1&&iLast>-1) || iGroup>-1 || iRole>-1;
+    let start=1;
+    if(!hasHeader){ iName=0; iGroup=1; iRole=2; start=0; } // plain list: name, group, role
+    const get=(r,i)=>(i>-1&&r[i]!=null)?String(r[i]).trim():"";
+    const have={}; (state.roster||[]).forEach(r=>{ if(r&&r.name) have[r.name.toLowerCase().trim()]=1; });
+    let added=0, skipped=0;
+    for(let r=start;r<rows.length;r++){
+      const row=rows[r];
+      let nm=get(row,iName);
+      if(!nm && iFirst>-1) nm=(get(row,iFirst)+" "+get(row,iLast)).trim();
+      if(!nm) continue;
+      const key=nm.toLowerCase();
+      if(have[key]){ skipped++; continue; }
+      have[key]=1;
+      state.roster.push({ id:newId(), name:nm, group:get(row,iGroup),
+        role:hasHeader&&iRole<0?"Camper":normRole(get(row,iRole)), status:"Out", last:"" });
+      added++;
+    }
+    return {added:added,skipped:skipped,bad:false};
+  }
+  $("rosterImport").addEventListener("click",()=>$("rosterImportFile").click());
+  $("rosterImportFile").addEventListener("change",e=>{
+    const f=e.target.files&&e.target.files[0]; e.target.value="";
+    if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const res=importRosterCSV(String(rd.result||""));
+      const note=$("rosterImportNote");
+      if(res.bad){ if(note) note.textContent="couldn't read that file as CSV"; return; }
+      if(note) note.textContent="imported "+res.added+(res.skipped?" · "+res.skipped+" already on roster":"");
+      if(res.added){ renderRoster(); renderTiles(); save(); }
+    };
+    rd.readAsText(f);
+  });
   $("addSch").addEventListener("click",()=>{ const s=curSched(); if(!s) return; s.push({time:"",activity:"",loc:"",status:"Upcoming"}); renderSchedule(); save(); });
 
   // platoon controls
@@ -5923,7 +5983,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.1"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.2"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

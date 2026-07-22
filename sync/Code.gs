@@ -28,7 +28,9 @@
  */
 
 var CHUNK = 8000; // characters per Script-Property value (limit is ~9 KB)
-var TOMB_TTL_MS = 86400000; // forget deletions after 24h
+var TOMB_TTL_MS = 1209600000; // remember deletions for 14 days — must outlast the camp week
+// plus any phone that slept through a delete, or a stale device can resurrect the record.
+// Keep in step with the same constant in index.html (tests/merge.test.mjs enforces this).
 
 // Fields grouped into sections that merge as a unit (newest wins).
 var SECTION_FIELDS = {

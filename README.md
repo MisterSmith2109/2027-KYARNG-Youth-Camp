@@ -28,6 +28,27 @@ the matching `APP_VERSION` constant near the bottom of `index.html`,
 `psg.html`, `medic.html`, and `dc.html`. Phones already in the field will see
 the update bar within 5 minutes (or the next time the page is opened).
 
+Also new for 2027:
+
+- **Tested merge logic** — the sync merge (the code that decides whether a
+  camper's sign-in survives when two computers write at once) now has a test
+  suite: `node tests/merge.test.mjs`. It loads the *real* shipped code from
+  `sync/Code.gs` and `index.html` — including a drift guard that fails if the
+  client and server rules ever fall out of step — and simulates multi-device
+  races: concurrent sign-ins, edit-vs-edit, delete-vs-edit, and stale phones
+  reconnecting days later. Run it after touching `sync/Code.gs` or the sync
+  block in `index.html`.
+- **Deletes stick for the whole camp** — deletion tombstones now live 14 days
+  (was 24 hours), so a phone that slept through a roster delete can no longer
+  resurrect the record when it reconnects later in the week.
+- **Roster CSV import** — in *Roster · Sign-In*, **⬆ Import roster CSV** loads
+  the whole camp from a spreadsheet export instead of typing names. It
+  auto-detects columns (`Name` or `First/Last Name`, `Platoon`/`Group`,
+  `Role`) and also accepts a plain headerless `name, group, role` list.
+  People already on the roster are skipped, so re-importing an updated
+  manifest only adds the new folks. Everyone imports as signed **Out** —
+  first formation signs them in.
+
 ---
 
 A single-file operations/status board for running a youth camp. It keeps the

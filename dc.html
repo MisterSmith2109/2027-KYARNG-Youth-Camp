@@ -375,5 +375,33 @@
   setInterval(flush, 15000);
 })();
 </script>
+<script>
+// ---------- app-version check: no phone can keep running an outdated cached page ----------
+// version.json is bumped on every deploy. If the page on screen is older, a "tap to
+// update" bar appears and the tap does a cache-busted reload of the newest version.
+// (Fails silently when the board is run from a local file with no server.)
+(function(){
+  var APP_VERSION="2027.1"; // keep in step with version.json on each deploy
+  try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
+  var bar=null;
+  function show(){ if(bar) return;
+    bar=document.createElement("div");
+    bar.style.cssText="position:fixed;left:10px;right:10px;bottom:12px;z-index:9999;background:#f5b62c;color:#241a05;font:600 14px system-ui,sans-serif;padding:12px 14px;border-radius:12px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5);cursor:pointer";
+    bar.textContent="\u2b06 New version available \u2014 tap to update";
+    bar.addEventListener("click",function(){ location.replace(location.pathname+"?u="+Date.now()+location.hash); });
+    document.body.appendChild(bar);
+  }
+  function check(){
+    try{
+      fetch("version.json?fresh="+Date.now(),{cache:"no-store"})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(j){ if(j&&j.version&&String(j.version)!==APP_VERSION) show(); })
+        .catch(function(){});
+    }catch(e){}
+  }
+  check(); setInterval(check,300000); // on load, then every 5 minutes
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
+})();
+</script>
 </body>
 </html>

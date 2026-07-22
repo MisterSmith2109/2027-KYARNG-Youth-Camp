@@ -3616,6 +3616,7 @@ var qrcode = function() {
   const myDeviceId="dev-"+Math.random().toString(36).slice(2,10);
   let syncUrl=""; try{ syncUrl=localStorage.getItem(SYNC_KEY)||""; }catch(e){}
   let syncPollTimer=null, syncPushTimer=null, syncLastRev=-1, syncApplying=false, syncConnected=false, syncPushPending=false;
+  let syncLastPullAt=0, syncLastPullTry=0; // freshness contract: when the board was last CONFIRMED against the server
   // --- safe-merge metadata (mirrors the rules in sync/Code.gs) ---
   const SYNC_LISTS=["roster","incidents","sensitive","gsas","heatCas","supplyRequests","rfis"];
   const SYNC_SECTIONS={
@@ -3683,12 +3684,18 @@ var qrcode = function() {
   }
   async function syncPull(){
     if(!syncUrl) return;
+    syncLastPullTry=Date.now();
     let txt;
-    try{ const r=await fetch(syncUrl,{method:"GET"}); txt=await r.text(); }
+    // Cache-bust every GET (unique query + no-store) so no browser or proxy can hand
+    // back a cached body \u2014 freshness is only ever claimed from a real server response.
+    const u=syncUrl+(syncUrl.indexOf("?")>=0?"&":"?")+"fresh="+Date.now();
+    try{ const r=await fetch(u,{method:"GET",cache:"no-store"}); txt=await r.text(); }
     catch(e){ syncSetStatus("offline \u2014 retrying","warn"); return; }
     let env; try{ env=JSON.parse(txt); }catch(e){ return; }
     if(!env||typeof env!=="object") return;
     const rev=+(env._rev||0), board=env.board;
+    if(rev<syncLastRev) return; // monotonic guard: a lower rev is a stale body \u2014 drop it, don't call it fresh
+    syncLastPullAt=Date.now();
     if(rev>syncLastRev){
       syncLastRev=rev;
       // The server board is the merged union of all devices, so applying it can't drop
@@ -3718,7 +3725,7 @@ var qrcode = function() {
     syncConnected=true; $("syncConnect").textContent="Disconnect"; $("syncUrl").disabled=true;
     syncSetStatus("connecting\u2026","");
     syncBase={}; // seeding: diff against an empty base so our first push tags everything
-    let txt=""; try{ const r=await fetch(syncUrl,{method:"GET"}); txt=await r.text(); }
+    let txt=""; try{ const r=await fetch(syncUrl+(syncUrl.indexOf("?")>=0?"&":"?")+"fresh="+Date.now(),{method:"GET",cache:"no-store"}); txt=await r.text(); }
     catch(e){ syncSetStatus("could not reach the sync link","warn"); }
     let env=null; try{ env=txt?JSON.parse(txt):null; }catch(e){ env=null; }
     const board=env&&env.board;
@@ -3727,6 +3734,23 @@ var qrcode = function() {
     clearInterval(syncPollTimer); syncPollTimer=setInterval(syncPull,4000);
     renderPsgShare();
   }
+  // Freshness watchdog (runs off the 1-second clock tick): the status can only read
+  // "synced" while a pull has confirmed the board recently. After that it degrades to
+  // STALE, then OFFLINE — and a throttled forced pull tries to recover instead of
+  // waiting on the poll timer. Wake-up events below pull the moment the machine can.
+  function syncFreshWatchdog(){
+    if(!syncConnected||!syncUrl||syncPushPending) return;
+    const age=syncLastPullAt?(Date.now()-syncLastPullAt):Infinity;
+    if(age>12000){ // poll is 4s — 12s means three misses
+      const s=Math.round(age/1000), t=s<60?(s+"s"):(Math.round(s/60)+"m");
+      if(age>60000) syncSetStatus("OFFLINE — board data "+t+" old","warn");
+      else syncSetStatus("STALE — last synced "+t+" ago","warn");
+      if(Date.now()-syncLastPullTry>8000) syncPull();
+    }
+  }
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&syncConnected) syncPull(); });
+  window.addEventListener("focus",()=>{ if(syncConnected) syncPull(); });
+  window.addEventListener("online",()=>{ if(syncConnected) syncPull(); });
   function syncDisconnect(){
     syncConnected=false; syncUrl=""; try{ localStorage.removeItem(SYNC_KEY); }catch(e){}
     clearInterval(syncPollTimer); clearTimeout(syncPushTimer); syncPushPending=false;
@@ -5877,7 +5901,7 @@ var qrcode = function() {
     renderAll();
     setupCollapsibles();
     wrRestore(); if(wr.running) wrTick(); else renderWR();  // resume a running work/rest cycle after reload
-    tickClock(); setInterval(tickClock,1000);
+    tickClock(); setInterval(()=>{ tickClock(); syncFreshWatchdog(); },1000);
     setInterval(refreshSchedStatuses,30000); // advance schedule statuses as time passes
     WX.load();
     setInterval(()=>WX.load(),600000);
@@ -5891,6 +5915,34 @@ var qrcode = function() {
     setInterval(()=>bkSnapshot("auto"), 300000); // rolling snapshot every 5 minutes (skips if unchanged)
     flash();
   })();
+})();
+</script>
+<script>
+// ---------- app-version check: no phone can keep running an outdated cached page ----------
+// version.json is bumped on every deploy. If the page on screen is older, a "tap to
+// update" bar appears and the tap does a cache-busted reload of the newest version.
+// (Fails silently when the board is run from a local file with no server.)
+(function(){
+  var APP_VERSION="2027.1"; // keep in step with version.json on each deploy
+  try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
+  var bar=null;
+  function show(){ if(bar) return;
+    bar=document.createElement("div");
+    bar.style.cssText="position:fixed;left:10px;right:10px;bottom:12px;z-index:9999;background:#f5b62c;color:#241a05;font:600 14px system-ui,sans-serif;padding:12px 14px;border-radius:12px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5);cursor:pointer";
+    bar.textContent="\u2b06 New version available \u2014 tap to update";
+    bar.addEventListener("click",function(){ location.replace(location.pathname+"?u="+Date.now()+location.hash); });
+    document.body.appendChild(bar);
+  }
+  function check(){
+    try{
+      fetch("version.json?fresh="+Date.now(),{cache:"no-store"})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(j){ if(j&&j.version&&String(j.version)!==APP_VERSION) show(); })
+        .catch(function(){});
+    }catch(e){}
+  }
+  check(); setInterval(check,300000); // on load, then every 5 minutes
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
 })();
 </script>
 </body>

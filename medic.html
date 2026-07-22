@@ -25,7 +25,15 @@
   .h-time{font-family:var(--mono);font-size:15px;font-weight:700}
   .h-stat{font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:2px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--black-status);flex:none}
-  .dot.on{background:var(--green)} .dot.warn{background:var(--amber)}
+  .dot.on{background:var(--green)} .dot.warn{background:var(--amber)} .dot.off{background:var(--red)}
+
+  /* freshness banner — shown whenever the data on screen can't be proven current */
+  .freshbar{position:sticky;top:0;z-index:60;display:flex;gap:8px;align-items:center;margin-top:10px;
+    padding:9px 13px;border-radius:10px;font-size:13px;font-weight:600;background:var(--amber);color:#241a05}
+  .freshbar.off{background:var(--red);color:#2a0d08}
+  .freshbar b{font-family:var(--mono);font-size:11px;letter-spacing:.12em;white-space:nowrap}
+  body.data-old .card:not(.freshbar){opacity:.72}
+  .req-ago{font-family:var(--mono);font-size:10px;color:var(--muted)}
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-top:12px}
   .k{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
@@ -169,6 +177,8 @@
     </div>
   </header>
 
+  <div class="card freshbar hide" id="freshBar"><b id="freshBarK">DATA MAY BE OLD</b><span id="freshBarTxt"></span></div>
+
   <div class="card page-alert hide" id="pageAlert">
     <div class="pa-main"><span class="pa-k">MEDIC PAGE</span><div class="pa-txt" id="pageTxt">—</div></div>
     <button class="pa-x" id="pageX" aria-label="Dismiss">×</button>
@@ -299,11 +309,11 @@
     return {h:parseInt(p.hour,10)%24, m:parseInt(p.minute,10), dayIdx:WEEKDAY_IDX[p.weekday]}; }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 
-  var state={ board:null, rev:-1, url:"", online:false };
+  var state={ board:null, rev:-1, url:"", online:false, lastPullAt:0 };
   var medicName="", isLead=false, showWeek=false;
 
-  function saveBoardCache(){ try{ if(state.board) localStorage.setItem(LS_BOARD, JSON.stringify({rev:state.rev,board:state.board})); }catch(e){} }
-  function restoreBoardCache(){ try{ var o=JSON.parse(localStorage.getItem(LS_BOARD)||"null"); if(o&&o.board){ state.board=o.board; state.rev=+(o.rev||0); } }catch(e){} }
+  function saveBoardCache(){ try{ if(state.board) localStorage.setItem(LS_BOARD, JSON.stringify({rev:state.rev,at:state.lastPullAt,board:state.board})); }catch(e){} }
+  function restoreBoardCache(){ try{ var o=JSON.parse(localStorage.getItem(LS_BOARD)||"null"); if(o&&o.board){ state.board=o.board; state.rev=+(o.rev||0); state.lastPullAt=+(o.at||0); } }catch(e){} }
 
   // ---------- toast ----------
   var toastTimer=null;
@@ -317,18 +327,69 @@
     if(state.url){ render(); pull(); flushOutbox(); clearInterval(pollTimer); pollTimer=setInterval(pull,10000); }
     else { openSetup(true); }
   }
+  var lastPullTry=0;
   function pull(){
     if(!state.url) return;
-    fetch(state.url,{method:"GET"}).then(function(r){return r.text();}).then(function(txt){
+    lastPullTry=Date.now();
+    // Cache-bust every GET (unique query + no-store) so no browser, proxy, or webview can
+    // ever hand back a cached body — freshness is only ever claimed from a real response.
+    var u=state.url+(state.url.indexOf("?")>=0?"&":"?")+"fresh="+Date.now();
+    fetch(u,{method:"GET",cache:"no-store"}).then(function(r){return r.text();}).then(function(txt){
       var env=null; try{ env=JSON.parse(txt); }catch(e){}
-      if(env&&env.board){ state.board=env.board; state.rev=+(env._rev||0); state.online=true; saveBoardCache(); }
-      else state.online=true;
+      if(env&&env.board){
+        var rev=+(env._rev||0);
+        // Monotonic guard: never step back to an older board. A response with a lower
+        // rev than what's on screen is a stale body — drop it, and don't call it fresh.
+        if(rev>=state.rev){ state.board=env.board; state.rev=rev; state.online=true; state.lastPullAt=Date.now(); saveBoardCache(); }
+      }
+      else { state.online=true; state.lastPullAt=Date.now(); }
       render(); flushOutbox();
     }).catch(function(){ state.online=false; setStatus(); });
   }
+  // Freshness contract: the chip can only read LIVE while a pull has confirmed the board
+  // within the last FRESH_MS — a medic never acts on a dispatch the page can't prove is
+  // current. Poll is 10s, so 22s tolerates one missed poll before degrading to STALE.
+  var FRESH_MS=22000, STALE_MS=90000;
+  function ageTxt(ms){
+    if(!isFinite(ms)) return "no data yet";
+    var s=Math.max(0,Math.round(ms/1000));
+    if(s<60) return s+"s ago"; var m=Math.round(s/60);
+    if(m<60) return m+"m ago"; return Math.round(m/6)/10+"h ago";
+  }
+  function dataAge(){ return state.lastPullAt?(Date.now()-state.lastPullAt):Infinity; }
   function setStatus(){ var d=$("hDot"), s=$("hStat"), pend=loadOutbox().length;
-    if(state.online){ d.className="dot on"; s.textContent="live"+(pend?" · "+pend+" to send":""); }
-    else { d.className="dot warn"; s.textContent=pend?(pend+" to send — retrying"):"offline — retrying"; } }
+    var age=dataAge(), suffix=pend?" · "+pend+" to send":"";
+    var tier=(state.online && age<FRESH_MS)?"live":(age<STALE_MS?"stale":"off");
+    if(tier==="live"){ d.className="dot on"; s.textContent="LIVE · "+ageTxt(age)+suffix; }
+    else if(tier==="stale"){ d.className="dot warn"; s.textContent="STALE · "+ageTxt(age)+suffix; }
+    else { d.className="dot off"; s.textContent="OFFLINE · "+ageTxt(age)+suffix; }
+    var bar=$("freshBar"), barK=$("freshBarK"), barTxt=$("freshBarTxt");
+    if(bar){
+      if(tier==="live" || !state.url){ bar.classList.add("hide"); document.body.classList.remove("data-old"); }
+      else if(tier==="stale"){ bar.classList.remove("hide"); bar.classList.remove("off");
+        barK.textContent="DATA MAY BE OLD"; barTxt.textContent="last updated "+ageTxt(age)+" — reconnecting…";
+        document.body.classList.remove("data-old"); }
+      else { bar.classList.remove("hide"); bar.classList.add("off");
+        barK.textContent="OFFLINE"; barTxt.textContent=(isFinite(age)?"showing data from "+ageTxt(age):"no board data yet")+" — will update when signal returns";
+        document.body.classList.add("data-old"); }
+    }
+  }
+  // Watchdog: ages the status every second, and if no successful pull landed recently,
+  // forces one (throttled) instead of waiting on the poll timer.
+  function freshWatchdog(){
+    setStatus(); updateReqAges();
+    if(!state.url) return;
+    if(dataAge()>15000 && Date.now()-lastPullTry>10000) pull();
+  }
+  // Live "received Xs ago" on each dispatch card.
+  function updateReqAges(){
+    var els=document.querySelectorAll(".req-ago[data-at]"), now=Date.now();
+    for(var i=0;i<els.length;i++){ var at=+els[i].getAttribute("data-at")||0; if(at) els[i].textContent="received "+ageTxt(now-at); }
+  }
+  // The moment the phone wakes, regains focus, or gets signal back — pull first.
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden){ pull(); } });
+  window.addEventListener("focus",function(){ pull(); });
+  window.addEventListener("online",function(){ pull(); flushOutbox(); });
 
   // ---------- outbox (status updates + postings; append/upsert by id) ----------
   function loadOutbox(){ try{ var a=JSON.parse(localStorage.getItem(LS_OUTBOX)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
@@ -396,10 +457,16 @@
       if(s==="new") acts='<button class="req-btn go" data-adv="'+esc(r.id)+'" data-to="Acknowledged">Acknowledge</button><button class="req-btn go" data-adv="'+esc(r.id)+'" data-to="En route">En route</button>';
       else if(s==="acknowledged") acts='<button class="req-btn go" data-adv="'+esc(r.id)+'" data-to="En route">En route</button>';
       acts+='<button class="req-btn done" data-adv="'+esc(r.id)+'" data-to="Resolved">Resolve</button>';
+      // When this dispatch was actually received: explicit field, else decoded from the
+      // id ("md" + Date.now().toString(36) + 4 random chars), else last-modified.
+      var recvAt=+r.created||0;
+      if(!recvAt && /^md/.test(String(r.id||""))){ var p=parseInt(String(r.id).slice(2,-4),36); if(p>16e11&&p<41e11) recvAt=p; }
+      if(!recvAt) recvAt=+r._m||0;
       card.innerHTML=
         '<div class="req-top"><span class="req-urg urg-'+uc+'">'+esc(urg.toUpperCase())+'</span>'+
           '<span class="req-cat">'+esc(r.category||"Medical")+'</span>'+
-          '<span class="req-time">'+esc(fmtHm(r.time))+'</span></div>'+
+          '<span class="req-time">'+esc(fmtHm(r.time))+'</span>'+
+          (recvAt?'<span class="req-ago" data-at="'+recvAt+'"></span>':'')+'</div>'+
         (r.location?'<div class="req-loc">'+esc(r.location)+'</div>':'')+
         (r.platoon?'<div class="req-meta">from '+esc(r.platoon)+'</div>':'')+
         (r.note?'<div class="req-note">'+esc(r.note)+'</div>':'')+
@@ -407,6 +474,7 @@
         '<div class="req-actions">'+acts+'</div>';
       list.appendChild(card);
     });
+    updateReqAges();
   }
   function fmtHm(t){ t=String(t||""); return /^\d{4}$/.test(t)?(t.slice(0,2)+":"+t.slice(2,4)):t; }
 
@@ -638,13 +706,41 @@
     if(!$("setup").classList.contains("hide")) {} // no-op
   }
 
-  setInterval(function(){ var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); },1000);
+  setInterval(function(){ var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); freshWatchdog(); },1000);
 
   // pre-fill from a shared link: medic.html?sync=<exec>
   try{ var qs=new URLSearchParams(location.search); var qSync=qs.get("sync");
     if(qSync){ localStorage.setItem(LS_URL,qSync); history.replaceState(null,"",location.pathname); } }catch(e){}
 
   connect();
+})();
+</script>
+<script>
+// ---------- app-version check: no phone can keep running an outdated cached page ----------
+// version.json is bumped on every deploy. If the page on screen is older, a "tap to
+// update" bar appears and the tap does a cache-busted reload of the newest version.
+// (Fails silently when the board is run from a local file with no server.)
+(function(){
+  var APP_VERSION="2027.1"; // keep in step with version.json on each deploy
+  try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
+  var bar=null;
+  function show(){ if(bar) return;
+    bar=document.createElement("div");
+    bar.style.cssText="position:fixed;left:10px;right:10px;bottom:12px;z-index:9999;background:#f5b62c;color:#241a05;font:600 14px system-ui,sans-serif;padding:12px 14px;border-radius:12px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5);cursor:pointer";
+    bar.textContent="\u2b06 New version available \u2014 tap to update";
+    bar.addEventListener("click",function(){ location.replace(location.pathname+"?u="+Date.now()+location.hash); });
+    document.body.appendChild(bar);
+  }
+  function check(){
+    try{
+      fetch("version.json?fresh="+Date.now(),{cache:"no-store"})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(j){ if(j&&j.version&&String(j.version)!==APP_VERSION) show(); })
+        .catch(function(){});
+    }catch(e){}
+  }
+  check(); setInterval(check,300000); // on load, then every 5 minutes
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
 })();
 </script>
 </body>

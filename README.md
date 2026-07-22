@@ -1,4 +1,34 @@
-# KYARNG Youth Camp — TOC Status Board
+# KYARNG Youth Camp — TOC Status Board (2027)
+
+## New for 2027 — the freshness guarantee
+
+**No page will ever present old data as current.** Every screen that reads the
+shared board (TOC, PSG phones, Medic dashboard) now runs a freshness contract:
+
+- **LIVE / STALE / OFFLINE status** — the header chip shows the data's true age
+  ("LIVE · 3s ago"). It can only read LIVE while a pull has *confirmed* the
+  board against the server within the last few seconds. After that it degrades
+  to STALE, then OFFLINE — with a loud banner ("DATA MAY BE OLD — last updated
+  2m ago — reconnecting…") so nobody can mistake a cached board for a live one.
+- **Cache-proof reads** — every GET is uniquely cache-busted and sent
+  `no-store`, so no browser, proxy, or webview can hand back a cached response.
+  A response carrying an older revision than what's on screen is dropped, never
+  displayed (monotonic revision guard).
+- **Self-healing pull** — a 1-second watchdog forces a pull if none has landed
+  recently, and the page pulls *immediately* when the phone wakes, the tab
+  regains focus, or signal returns — before the user even reads the screen.
+- **Medic dispatch age** — each medic request card shows "received Xs ago",
+  live, so a medic never has to guess how old a dispatch is.
+- **App-version check** — `version.json` is bumped on each deploy; a page
+  running an outdated cached copy shows a **"New version — tap to update"** bar
+  that reloads the newest code. (Skips silently when run as a local file.)
+
+**When you deploy an update:** bump the version string in `version.json` *and*
+the matching `APP_VERSION` constant near the bottom of `index.html`,
+`psg.html`, `medic.html`, and `dc.html`. Phones already in the field will see
+the update bar within 5 minutes (or the next time the page is opened).
+
+---
 
 A single-file operations/status board for running a youth camp. It keeps the
 familiar military TOC (Tactical Operations Center) look — DTG/Zulu clock,

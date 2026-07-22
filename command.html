@@ -142,7 +142,7 @@
   html[data-theme="neo"] .h-name{ text-shadow:0 0 14px rgba(90,210,255,.5) }
   html[data-theme="neo"] input{ background:rgba(7,12,22,.86);border-color:var(--line-soft);color:var(--ink) }
 </style>
-<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
+<script>try{if(localStorage.getItem("kyarng27-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
 </head>
 <body>
 <div class="wrap" id="app" aria-live="polite">
@@ -259,14 +259,14 @@
 (function(){
   var $=function(id){return document.getElementById(id);};
   // ---------- theme toggle ----------
-  (function(){ var KEY="kyarng-camp-theme", root=document.documentElement;
+  (function(){ var KEY="kyarng27-camp-theme", root=document.documentElement;
     var lbl=function(){ var b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field":"◐ Neo"; };
     lbl();
     var b=$("btnTheme"); if(b) b.addEventListener("click",function(){ var neo=root.getAttribute("data-theme")==="neo";
       if(neo) root.removeAttribute("data-theme"); else root.setAttribute("data-theme","neo");
       try{ localStorage.setItem(KEY, neo?"field":"neo"); }catch(e){} lbl(); });
   })();
-  var LS_URL="kyarng-cmd-url", LS_BOARD="kyarng-cmd-board";
+  var LS_URL="kyarng27-cmd-url", LS_BOARD="kyarng27-cmd-board";
   var CAMP_TZ="America/Chicago";
   var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
   var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
@@ -730,7 +730,7 @@
 <script>
 // ---------- app-version check: no phone can keep running an outdated cached page ----------
 (function(){
-  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

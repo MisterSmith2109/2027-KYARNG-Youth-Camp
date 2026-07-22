@@ -270,7 +270,7 @@
   html[data-theme="neo"] .h-name{ text-shadow:0 0 14px rgba(87,230,255,.45) }
   html[data-theme="neo"] input,html[data-theme="neo"] select,html[data-theme="neo"] textarea{ background:rgba(7,12,22,.86);border-color:var(--line-soft);color:var(--ink) }
 </style>
-<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
+<script>try{if(localStorage.getItem("kyarng27-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
 </head>
 <body>
 <div class="wrap" id="app" aria-live="polite">
@@ -573,16 +573,16 @@
 (function(){
   var $=function(id){return document.getElementById(id);};
   // ---------- theme toggle (Field <-> opt-in Neo) ----------
-  (function(){ var KEY="kyarng-camp-theme", root=document.documentElement;
+  (function(){ var KEY="kyarng27-camp-theme", root=document.documentElement;
     var lbl=function(){ var b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field":"◐ Neo"; };
     lbl();
     var b=$("btnTheme"); if(b) b.addEventListener("click",function(){ var neo=root.getAttribute("data-theme")==="neo";
       if(neo) root.removeAttribute("data-theme"); else root.setAttribute("data-theme","neo");
       try{ localStorage.setItem(KEY, neo?"field":"neo"); }catch(e){} lbl(); });
   })();
-  var LS_URL="kyarng-psg-url", LS_PLT="kyarng-psg-platoon", LS_WR="kyarng-psg-wr",
-      LS_OUTBOX="kyarng-psg-outbox", LS_BOARD="kyarng-psg-board",
-      LS_NOTIFY="kyarng-psg-notify", LS_ALERTED="kyarng-psg-alerted", LS_NOTES="kyarng-psg-notes";
+  var LS_URL="kyarng27-psg-url", LS_PLT="kyarng27-psg-platoon", LS_WR="kyarng27-psg-wr",
+      LS_OUTBOX="kyarng27-psg-outbox", LS_BOARD="kyarng27-psg-board",
+      LS_NOTIFY="kyarng27-psg-notify", LS_ALERTED="kyarng27-psg-alerted", LS_NOTES="kyarng27-psg-notes";
   var ALERT_LEAD=10; // minutes before an event to alert
   var HC_TYPES=["Heat cramps","Heat exhaustion","Heat stroke","Other / precaution"]; // must match index.html
   var INC_QUICK=["Injury","Illness","Missing camper","Behavior","Dehydration","Other"];
@@ -1015,7 +1015,7 @@
   }
   // A feed item is a "TOC reply" once the TOC acts on it: RFI answered/closed,
   // medic request advanced past New, or a supply request filled.
-  var LS_REPLIES="kyarng-psg-replies";
+  var LS_REPLIES="kyarng27-psg-replies";
   function replySig(v){
     if(!v||!v.status||v.status[0]==="pending") return null;
     if(v.kind==="rfi" && v.status[0]==="filled") return "rf:"+v.id+":"+v.status[1];   // Answered / Closed
@@ -1372,7 +1372,7 @@
   $("campAarClose").addEventListener("click",closeCampAar);
 
   // ---------- platoon AAR (the PSG's own after-action review, saved on this phone) ----------
-  var LS_PAAR="kyarng-psg-aar";
+  var LS_PAAR="kyarng27-psg-aar";
   var PAAR_FIELDS=[["paSig","sig"],["paSustain","sustain"],["paImprove","improve"],["paRec","rec"]];
   function loadPaar(){ try{ var o=JSON.parse(localStorage.getItem(LS_PAAR)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
   function savePaar(o){ try{ localStorage.setItem(LS_PAAR, JSON.stringify(o||{})); }catch(e){} }
@@ -1564,7 +1564,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

@@ -162,7 +162,7 @@
   html[data-theme="neo"] .h-name{ text-shadow:0 0 14px rgba(255,120,140,.5) }
   html[data-theme="neo"] input,html[data-theme="neo"] select,html[data-theme="neo"] textarea{ background:rgba(7,12,22,.86);border-color:var(--line-soft);color:var(--ink) }
 </style>
-<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
+<script>try{if(localStorage.getItem("kyarng27-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
 </head>
 <body>
 <div class="wrap" id="app" aria-live="polite">
@@ -273,16 +273,16 @@
 (function(){
   var $=function(id){return document.getElementById(id);};
   // ---------- theme toggle (Field <-> opt-in Neo) ----------
-  (function(){ var KEY="kyarng-camp-theme", root=document.documentElement;
+  (function(){ var KEY="kyarng27-camp-theme", root=document.documentElement;
     var lbl=function(){ var b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field":"◐ Neo"; };
     lbl();
     var b=$("btnTheme"); if(b) b.addEventListener("click",function(){ var neo=root.getAttribute("data-theme")==="neo";
       if(neo) root.removeAttribute("data-theme"); else root.setAttribute("data-theme","neo");
       try{ localStorage.setItem(KEY, neo?"field":"neo"); }catch(e){} lbl(); });
   })();
-  var LS_URL="kyarng-medic-url", LS_NAME="kyarng-medic-name", LS_LEAD="kyarng-medic-lead",
-      LS_BOARD="kyarng-medic-board", LS_OUTBOX="kyarng-medic-outbox", LS_ENC="kyarng-medic-enc",
-      LS_NOTIFY="kyarng-medic-notify", LS_PAGED="kyarng-medic-paged";
+  var LS_URL="kyarng27-medic-url", LS_NAME="kyarng27-medic-name", LS_LEAD="kyarng27-medic-lead",
+      LS_BOARD="kyarng27-medic-board", LS_OUTBOX="kyarng27-medic-outbox", LS_ENC="kyarng27-medic-enc",
+      LS_NOTIFY="kyarng27-medic-notify", LS_PAGED="kyarng27-medic-paged";
   var CAMP_TZ="America/Chicago";
   var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
   var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
@@ -721,7 +721,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

@@ -677,7 +677,7 @@
   html[data-theme="neo"] #startOverlay{ background:rgba(4,7,13,.97) }
   #btnTheme{ min-width:118px }
 </style>
-<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
+<script>try{if(localStorage.getItem("kyarng27-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
 </head>
 <body>
  
@@ -3540,7 +3540,7 @@ var qrcode = function() {
 <script>
 (function(){
   "use strict";
-  const KEY="kyarng-camp-board-v2";
+  const KEY="kyarng27-camp-board-v2";
   const $=id=>document.getElementById(id);
   const pad=n=>String(n).padStart(2,"0");
   const nowDTG=()=>{ const d=new Date(); return pad(d.getUTCDate())+pad(d.getUTCHours())+pad(d.getUTCMinutes())+"Z"; };
@@ -3677,7 +3677,7 @@ var qrcode = function() {
   // ---------- live multi-computer sync (optional; via a Google Apps Script endpoint) ----------
   // The server assigns the revision number (single source of truth); each device tags its
   // writes with a device id so it ignores its own echo. GET returns {"_rev":N,"board":{...}}.
-  const SYNC_KEY="kyarng-camp-syncurl";
+  const SYNC_KEY="kyarng27-camp-syncurl";
   const myDeviceId="dev-"+Math.random().toString(36).slice(2,10);
   let syncUrl=""; try{ syncUrl=localStorage.getItem(SYNC_KEY)||""; }catch(e){}
   let syncPollTimer=null, syncPushTimer=null, syncLastRev=-1, syncApplying=false, syncConnected=false, syncPushPending=false;
@@ -3835,7 +3835,7 @@ var qrcode = function() {
   // ---------- first-run setup wizard ----------
   // Auto-opens once on a brand-new board; never blocks (every step is optional and
   // just drives the board's own existing controls). Reopen with the toolbar Setup button.
-  const SETUP_KEY="kyarng-setup-seen";
+  const SETUP_KEY="kyarng27-setup-seen";
   let suTimer=null, suAutoPending=false; // set at init on a fresh board; fires after the start overlay is dismissed
   function suRefresh(){
     const tick=(id,ok)=>{ const el=$(id); if(!el) return;
@@ -4187,7 +4187,7 @@ var qrcode = function() {
   // Driven by the current heat category. Times a bout of active play, then a rest, and
   // loops — chiming and flashing at each switch. Survives a page reload so a wall display
   // can be refreshed without losing the running cycle.
-  const WR_KEY="kyarng-camp-wrcycle";
+  const WR_KEY="kyarng27-camp-wrcycle";
   const wr={running:false, phase:"work", endsAt:0, timer:null};
   function wrPersist(){ try{ localStorage.setItem(WR_KEY, JSON.stringify({running:wr.running,phase:wr.phase,endsAt:wr.endsAt})); }catch(e){} }
   function wrRestore(){
@@ -5133,7 +5133,7 @@ var qrcode = function() {
 
   // roster + schedule buttons
   // Roster sort (a per-device view preference; sorts the display, never the stored order).
-  const ROSTER_SORT_KEY="kyarng-roster-sort";
+  const ROSTER_SORT_KEY="kyarng27-roster-sort";
   let rosterSortMode="added";
   try{ rosterSortMode=localStorage.getItem(ROSTER_SORT_KEY)||"added"; }catch(e){}
   $("rosterSort").addEventListener("change",e=>{ rosterSortMode=e.target.value; try{ localStorage.setItem(ROSTER_SORT_KEY,rosterSortMode); }catch(e){} renderRoster(); });
@@ -5754,7 +5754,7 @@ var qrcode = function() {
 
   $("btnPrint").addEventListener("click",()=>window.print());
   // theme toggle: Field (default) <-> Neo (futuristic glass HUD); persisted per device
-  (function(){ const KEY="kyarng-camp-theme"; const root=document.documentElement;
+  (function(){ const KEY="kyarng27-camp-theme"; const root=document.documentElement;
     const lbl=()=>{ const b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field look":"◐ Neo look"; };
     lbl();
     const b=$("btnTheme"); if(b) b.addEventListener("click",()=>{ const neo=root.getAttribute("data-theme")==="neo";
@@ -5798,7 +5798,7 @@ var qrcode = function() {
   $("boardFile").addEventListener("change",e=>{ loadFile(e.target.files[0]); e.target.value=""; });
 
   // ---------- automatic local backups (rolling snapshots on this computer) ----------
-  const BKEY="kyarng-camp-board-backups-v1", BK_MAX=24, BK_BUDGET=3000000;
+  const BKEY="kyarng27-camp-board-backups-v1", BK_MAX=24, BK_BUDGET=3000000;
   async function bkLoadList(){
     try{ if(window.storage&&window.storage.get){ const r=await window.storage.get(BKEY,false); if(r&&r.value) return JSON.parse(r.value)||[]; } }catch(e){}
     try{ const v=localStorage.getItem(BKEY); if(v) return JSON.parse(v)||[]; }catch(e){}
@@ -6130,7 +6130,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

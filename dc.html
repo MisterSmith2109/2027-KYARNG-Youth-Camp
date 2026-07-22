@@ -135,7 +135,7 @@
 <script>
 (function(){
   var $=function(id){return document.getElementById(id);};
-  var LS_JUDGE="kyarng-dc-judge", LS_URL="kyarng-dc-url", LS_SCORES="kyarng-dc-scores", LS_OUTBOX="kyarng-dc-outbox", LS_CAD="kyarng-dc-cadence";
+  var LS_JUDGE="kyarng27-dc-judge", LS_URL="kyarng27-dc-url", LS_SCORES="kyarng27-dc-scores", LS_OUTBOX="kyarng27-dc-outbox", LS_CAD="kyarng27-dc-cadence";
 
   var FACING=["Fall In","Present Arms","Order Arms","Right Face","Left Face","About Face","Right Step","Left Step","Fall Out"];
   var MARCHING=["Forward March","Column Right","Column Left","Right Flank","Left Flank","Rear March","Counter Column","Cadence"];
@@ -381,7 +381,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

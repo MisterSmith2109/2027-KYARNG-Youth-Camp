@@ -138,7 +138,7 @@
     var url=($("url").value||"").trim();
     if(!/^https:\/\/.+/.test(url) && !/^http:\/\/(127\.0\.0\.1|localhost)[:/]/.test(url)){ verdict(false,"Enter the https:// sync link first."); return; }
     if(!/\/exec\b/.test(url)){ verdict(false,"That link doesn't end in /exec — use the Web app URL from Deploy, not the /dev editor link."); return; }
-    try{ localStorage.setItem("kyarng-camp-syncurl-check",url); }catch(e){}
+    try{ localStorage.setItem("kyarng27-camp-syncurl-check",url); }catch(e){}
     $("go").disabled=true; $("verdict").className=""; $("verdict").style.display="none";
     buildSteps();
 
@@ -232,7 +232,7 @@
   try{
     var q=new URLSearchParams(location.search).get("sync");
     if(q){ $("url").value=q; history.replaceState(null,"",location.pathname); }
-    else{ $("url").value=localStorage.getItem("kyarng-camp-syncurl-check")||""; }
+    else{ $("url").value=localStorage.getItem("kyarng27-camp-syncurl-check")||""; }
   }catch(e){}
 })();
 </script>

@@ -3755,6 +3755,7 @@ var qrcode = function() {
     psg:["psgMsg","psgFormUrl","tocPhone","psgDocs"]
   };
   let syncSeq=0, syncBase={};   // syncBase = last board the server gave us; we diff against it to tag our own edits
+  let syncLastApplyAt=0;        // when applyRemote last replaced state with a server board
   function newId(){ return "i"+Date.now().toString(36)+"-"+(syncSeq++).toString(36)+Math.random().toString(36).slice(2,6); }
   const _recJson=r=>{ const c={}; for(const k in r){ if(k!=="_m") c[k]=r[k]; } return JSON.stringify(c); };
   const _eqF=(a,b)=>JSON.stringify(a===undefined?null:a)===JSON.stringify(b===undefined?null:b);
@@ -3795,6 +3796,7 @@ var qrcode = function() {
   function hhmmLocal(){ const c=campNow(); return pad(c.h)+":"+pad(c.m); }
   function applyRemote(board){
     syncApplying=true;
+    syncLastApplyAt=Date.now(); // the FLASH backend-check only trusts verdicts based on a server board this fresh
     syncBase=JSON.parse(JSON.stringify(board)); // remember the server's merged board as our diff base
     const keepDay=state.activeDay, keepPlat=state.activePlatoon; // day/platoon selection stays per-device
     // The end-of-camp log/AAR lives on this TOC computer only — it isn't in the sync whitelist, so
@@ -5329,13 +5331,22 @@ var qrcode = function() {
       wrap.appendChild(c);
     });
     Object.keys(acked).forEach(nm=>{ if(expected.indexOf(nm)<0){ const k=acked[nm], c=document.createElement("span"); c.className="fa-chip ok"; c.textContent="✓ "+nm+(k&&k.n?" "+k.n:""); wrap.appendChild(c); } });
-    // outdated-backend detection: we pushed the alert, polls have replaced local state with the
-    // server's merged board, and the alert never came back -> the deployed Code.gs predates FLASH.
-    if(flashWatchId && syncConnected && Date.now()-flashWatchAt>15000){
-      const present=(state.flashAlerts||[]).some(x=>x&&x.id===flashWatchId);
-      if(!present) $("flashWarn").classList.remove("hide");
-      else flashWatchId="";
-    }
+  }
+  // Outdated-backend watchdog. Judges ONLY what the server sent back (syncBase), never local
+  // state (the local copy always contains our own alert, which would mask a dropping backend).
+  // Runs every tick regardless of what's on screen, and clears itself: the warning hides the
+  // moment a server board carries the watched alert, and a watch expires after 10 minutes so a
+  // warning can never stick around after the backend has been fixed.
+  function flashWatchTick(){
+    const w=$("flashWarn"); if(!w) return;
+    if(!flashWatchId){ w.classList.add("hide"); return; }
+    if(!syncConnected) return; // no verdict without sync
+    if(syncLastApplyAt<=flashWatchAt) return; // wait for a server board newer than the send
+    const present=((syncBase&&syncBase.flashAlerts)||[]).some(x=>x&&x.id===flashWatchId);
+    if(present){ flashWatchId=""; w.classList.add("hide"); return; }
+    const age=Date.now()-flashWatchAt;
+    if(age>15000) w.classList.remove("hide");
+    if(age>600000){ flashWatchId=""; w.classList.add("hide"); }
   }
   document.querySelectorAll(".flash-btn").forEach(b=>{
     b.addEventListener("click",()=>sendFlash(b.getAttribute("data-flash"), b.getAttribute("data-txt")));
@@ -5348,7 +5359,7 @@ var qrcode = function() {
     sendFlash("ACCT","ACCOUNTABILITY — count your platoon and submit to TOC now");
     const fp=$("flashPanel"); if(fp&&fp.scrollIntoView) fp.scrollIntoView({behavior:"smooth",block:"start"});
   });
-  setInterval(renderFlash,1000);
+  setInterval(()=>{ renderFlash(); flashWatchTick(); },1000);
   $("addSch").addEventListener("click",()=>{ const s=curSched(); if(!s) return; s.push({time:"",activity:"",loc:"",status:"Upcoming"}); renderSchedule(); save(); });
 
   // platoon controls
@@ -6275,7 +6286,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.8"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.9"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

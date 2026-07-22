@@ -2,7 +2,7 @@
 // The newest deployed page always wins when there's signal; the cache is only
 // the offline fallback. This preserves the board's freshness contract: the SW
 // never serves a stale page in place of a reachable newer one.
-var APP_VERSION="2027.8"; // keep in step with version.json on each deploy
+var APP_VERSION="2027.9"; // keep in step with version.json on each deploy
 var CACHE="kyarng27-shell-"+APP_VERSION;
 var SHELL=["index.html","psg.html","medic.html","command.html","dc.html","synccheck.html","version.json"];
 

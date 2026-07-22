@@ -797,7 +797,7 @@
 <script>
 // ---------- app-version check: no phone can keep running an outdated cached page ----------
 (function(){
-  var APP_VERSION="2027.8"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.9"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

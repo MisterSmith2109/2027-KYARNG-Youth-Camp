@@ -206,6 +206,8 @@
   .fa-chip.ok{border-color:#5fd257;color:#9fdc9f;background:#10231a}
   .flash-actions{display:flex;gap:8px;flex-wrap:wrap}
   .flash-warn{margin-top:10px;border:1px solid #f5b62c;border-radius:9px;padding:10px 12px;color:#ffd97a;font-size:13.5px}
+  .flash-active.acct-done{border-color:#5fd257;background:#10231a}
+  .flash-active.acct-done .fa-kind{color:#9fdc9f}
 
   /* Backups modal */
   .bk-modal{position:fixed;inset:0;background:rgba(8,9,6,.82);display:flex;align-items:center;justify-content:center;padding:18px;z-index:80}
@@ -871,7 +873,7 @@
 
   <!-- ACCOUNTABILITY / FORMATION -->
   <div class="panel" id="fmPanel">
-    <div class="panel-head"><h2>Accountability &middot; Formation</h2><div class="head-right"><span class="si-chip" id="fmChip"></span></div></div>
+    <div class="panel-head"><h2>Accountability &middot; Formation</h2><div class="head-right"><button class="btn2" id="acctDrillBtn" title="Alarm every PSG phone into their platoon count sheet — the FLASH panel tracks who has reported">📢 Take accountability</button><span class="si-chip" id="fmChip"></span></div></div>
     <div class="panel-body">
       <div class="fm-banner" id="fmBanner">
         <div class="fm-big" id="fmBig">&mdash;</div>
@@ -5301,20 +5303,26 @@ var qrcode = function() {
     const a=flashActiveAlert();
     if(!a){ box.classList.add("hide"); return; }
     box.classList.remove("hide");
-    $("faKind").textContent="⚡ "+(a.kind||"FLASH")+" · sent "+(a.time||"")+(a.by?" by "+a.by:"");
-    $("faAge").textContent=flashAgeTxt(Date.now()-(+a._m||0))+" ago";
+    const isDrill=(a.kind==="ACCT");
+    // acks keyed by platoon; drill acks also carry n = "present/total" from the PSG's count
+    const acked={}; (state.flashAcks||[]).forEach(k=>{ if(k&&k.alert===a.id&&k.platoon) acked[String(k.platoon)]=k; });
+    // a drill expects every platoon (medics don't count platoons); a FLASH expects platoons + Medic
+    const expected=(state.platoons||[]).map(p=>p&&p.name).filter(Boolean).concat(isDrill?[]:["Medic"]);
+    const nAcked=expected.filter(nm=>acked[nm]).length, done=isDrill&&expected.length>0&&nAcked===expected.length;
+    box.classList.toggle("acct-done",done);
+    $("faKind").textContent=(isDrill?"📢 ACCOUNTABILITY DRILL":"⚡ "+(a.kind||"FLASH"))+" · sent "+(a.time||"")+(a.by?" by "+a.by:"");
+    $("faAge").textContent=done
+      ? "✅ COMPLETE in "+flashAgeTxt((Math.max.apply(null,expected.map(nm=>+acked[nm]._m||0))-(+a._m||0)))
+      : (isDrill?nAcked+"/"+expected.length+" reported · ":"")+flashAgeTxt(Date.now()-(+a._m||0))+(done?"":" ago");
     $("faText").textContent=a.text||"";
-    // acks: every platoon plus the medic team; green chip once its ack record arrives
-    const acked={}; (state.flashAcks||[]).forEach(k=>{ if(k&&k.alert===a.id&&k.platoon) acked[String(k.platoon)]=k.time||true; });
-    const expected=(state.platoons||[]).map(p=>p&&p.name).filter(Boolean).concat(["Medic"]);
     const wrap=$("faAcks"); wrap.innerHTML="";
     expected.forEach(nm=>{
-      const c=document.createElement("span");
-      c.className="fa-chip"+(acked[nm]?" ok":"");
-      c.textContent=(acked[nm]?"✓ ":"")+nm+(typeof acked[nm]==="string"?" "+acked[nm]:"");
+      const k=acked[nm], c=document.createElement("span");
+      c.className="fa-chip"+(k?" ok":"");
+      c.textContent=(k?"✓ ":"")+nm+(k&&k.n?" "+k.n:"")+(k&&typeof k.time==="string"?" "+k.time:"");
       wrap.appendChild(c);
     });
-    Object.keys(acked).forEach(nm=>{ if(expected.indexOf(nm)<0){ const c=document.createElement("span"); c.className="fa-chip ok"; c.textContent="✓ "+nm; wrap.appendChild(c); } });
+    Object.keys(acked).forEach(nm=>{ if(expected.indexOf(nm)<0){ const k=acked[nm], c=document.createElement("span"); c.className="fa-chip ok"; c.textContent="✓ "+nm+(k&&k.n?" "+k.n:""); wrap.appendChild(c); } });
     // outdated-backend detection: we pushed the alert, polls have replaced local state with the
     // server's merged board, and the alert never came back -> the deployed Code.gs predates FLASH.
     if(flashWatchId && syncConnected && Date.now()-flashWatchAt>15000){
@@ -5330,6 +5338,10 @@ var qrcode = function() {
   $("flashCustom").addEventListener("keydown",e=>{ if(e.key==="Enter") $("flashSend").click(); });
   $("flashClear").addEventListener("click",sendAllClear);
   $("flashCancel").addEventListener("click",cancelFlash);
+  $("acctDrillBtn").addEventListener("click",()=>{
+    sendFlash("ACCT","ACCOUNTABILITY — count your platoon and submit to TOC now");
+    const fp=$("flashPanel"); if(fp&&fp.scrollIntoView) fp.scrollIntoView({behavior:"smooth",block:"start"});
+  });
   setInterval(renderFlash,1000);
   $("addSch").addEventListener("click",()=>{ const s=curSched(); if(!s) return; s.push({time:"",activity:"",loc:"",status:"Upcoming"}); renderSchedule(); save(); });
 
@@ -6257,7 +6269,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.6"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.7"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

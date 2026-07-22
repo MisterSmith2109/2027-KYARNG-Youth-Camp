@@ -57,6 +57,16 @@ Also new for 2027:
   **Requires redeploying `sync/Code.gs`** (Deploy → Manage deployments →
   New version) — the TOC panel warns you if the deployed script is too old,
   and the comms check now has a **FLASH-capable backend** step that proves it.
+- **📢 Formation accountability drill** — on the TOC's *Accountability ·
+  Formation* panel, **Take accountability** alarms every PSG phone straight
+  into its platoon **count sheet** ("▶ START COUNT"). Each submission updates
+  the shared sign-in roster *and* reports back in the same push; the FLASH
+  panel and the Command Team view fill in live — a chip per platoon flipping
+  green with its count ("✓ Alpha 12/13 07:31") and a running "3/8 reported ·
+  elapsed" line, turning green **COMPLETE in m:ss** when the last platoon
+  reports. Camp-wide, provable accountability in minutes, with the drill time
+  on record. Medic phones are exempt (drills are platoon business). Rides the
+  FLASH channel — no extra backend deployment beyond the FLASH one.
 - **Command Team view (`command.html`)** — a read-only phone/tablet page for
   the command team and staff, replacing the old "Lifeline" pseudo-platoon on
   the PSG page. One screen shows the whole camp live: **accountability by

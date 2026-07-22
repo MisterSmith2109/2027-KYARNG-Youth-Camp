@@ -418,18 +418,20 @@
     var card=$("flashCard"); if(!card) return;
     var b=state.board, a=newestFlash(false), ac=newestFlash(true);
     if(a){
-      card.classList.remove("hide","allclear");
-      $("fcKind").textContent="⚡ "+(a.kind||"FLASH")+" · sent "+(a.time||"");
+      var isDrill=(a.kind==="ACCT");
+      var acked={}; ((b&&b.flashAcks)||[]).forEach(function(k){ if(k&&k.alert===a.id&&k.platoon) acked[String(k.platoon)]=k; });
+      var expected=((b&&b.platoons)||[]).map(function(p){ return p&&p.name; }).filter(Boolean).concat(isDrill?[]:["Medic"]);
+      var n=expected.filter(function(nm){ return acked[nm]; }).length;
+      var done=isDrill&&expected.length>0&&n===expected.length;
+      card.classList.remove("hide");
+      card.classList.toggle("allclear",done);
+      $("fcKind").textContent=(done?"✅ ":"")+(isDrill?"📢 ACCOUNTABILITY DRILL":"⚡ "+(a.kind||"FLASH"))+" · sent "+(a.time||"");
       var ageS=Math.max(0,Math.round((Date.now()-(+a._m||0))/1000));
-      $("fcAge").textContent=(ageS<60?ageS+"s":Math.round(ageS/60)+"m")+" ago";
+      $("fcAge").textContent=(isDrill?n+"/"+expected.length+" reported · ":"")+(done?"COMPLETE":(ageS<60?ageS+"s":Math.round(ageS/60)+"m")+" ago");
       $("fcText").textContent=a.text||"";
-      var acked={}; ((b&&b.flashAcks)||[]).forEach(function(k){ if(k&&k.alert===a.id&&k.platoon) acked[String(k.platoon)]=k.time||true; });
-      var expected=((b&&b.platoons)||[]).map(function(p){ return p&&p.name; }).filter(Boolean).concat(["Medic"]);
       var wrap=$("fcAcks"); wrap.innerHTML="";
-      var n=0;
-      expected.forEach(function(nm){ var c=document.createElement("span");
-        var ok=!!acked[nm]; if(ok) n++;
-        c.className="fc-chip"+(ok?" ok":""); c.textContent=(ok?"✓ ":"")+nm; wrap.appendChild(c); });
+      expected.forEach(function(nm){ var k=acked[nm], c=document.createElement("span");
+        c.className="fc-chip"+(k?" ok":""); c.textContent=(k?"✓ ":"")+nm+(k&&k.n?" "+k.n:""); wrap.appendChild(c); });
       if(flashChimedId!==a.id){ flashChimedId=a.id; flashBeep(); try{ if(navigator.vibrate) navigator.vibrate([250,100,250]); }catch(e){} }
     } else if(ac){
       card.classList.remove("hide"); card.classList.add("allclear");
@@ -789,7 +791,7 @@
 <script>
 // ---------- app-version check: no phone can keep running an outdated cached page ----------
 (function(){
-  var APP_VERSION="2027.6"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.7"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

@@ -607,7 +607,7 @@
   var LS_URL="kyarng27-psg-url", LS_PLT="kyarng27-psg-platoon", LS_WR="kyarng27-psg-wr",
       LS_OUTBOX="kyarng27-psg-outbox", LS_BOARD="kyarng27-psg-board",
       LS_NOTIFY="kyarng27-psg-notify", LS_ALERTED="kyarng27-psg-alerted", LS_NOTES="kyarng27-psg-notes",
-      LS_FLASH="kyarng27-psg-flashseen";
+      LS_FLASH="kyarng27-psg-flashseen", LS_DRILL="kyarng27-psg-drill";
   var ALERT_LEAD=10; // minutes before an event to alert
   var HC_TYPES=["Heat cramps","Heat exhaustion","Heat stroke","Other / precaution"]; // must match index.html
   var INC_QUICK=["Injury","Illness","Missing camper","Behavior","Dehydration","Other"];
@@ -788,15 +788,20 @@
   function checkFlash(){
     var seen=flashSeen();
     var a=activeFlash();
+    // accountability drill housekeeping: forget a pending drill once its alert ends
+    try{ var did=localStorage.getItem(LS_DRILL); if(did && (!a || a.id!==did)) localStorage.removeItem(LS_DRILL); }catch(e){}
     if(a && !seen[a.id]){
       if(flashShowingId!==a.id){
         flashShowingId=a.id;
-        $("foKind").textContent="⚡ "+(a.kind||"FLASH");
+        var isDrill=(a.kind==="ACCT");
+        $("foKind").textContent=isDrill?"📢 ACCOUNTABILITY":"⚡ "+(a.kind||"FLASH");
         $("foText").textContent=a.text||"";
         $("foMeta").textContent="from TOC · sent "+(a.time||"");
+        $("foAck").textContent=isDrill?"▶ START COUNT":"✔ ACKNOWLEDGE";
+        if(isDrill){ try{ localStorage.setItem(LS_DRILL,a.id); }catch(e){} }
         $("flashOv").classList.remove("hide");
         flashAlarmCount=0; clearTimeout(flashAlarmTimer); flashAlarm();
-        if(alertsEnabled&&alertsEnabled()){ try{ new Notification("⚡ FLASH — "+(a.kind||""),{body:a.text||"",tag:"flash-"+a.id}); }catch(e){} }
+        if(alertsEnabled&&alertsEnabled()){ try{ new Notification((isDrill?"📢 ACCOUNTABILITY":"⚡ FLASH — "+(a.kind||"")),{body:a.text||"",tag:"flash-"+a.id}); }catch(e){} }
       }
     } else if(flashShowingId && (!a || a.id!==flashShowingId)){
       hideFlash(); // canceled or superseded at the TOC
@@ -809,7 +814,9 @@
       flashBeep(); try{ if(navigator.vibrate) navigator.vibrate(200); }catch(e){}
     }
   }
-  $("foAck").addEventListener("click",function(){ var a=activeFlash(); if(a) ackFlash(a); else hideFlash(); });
+  $("foAck").addEventListener("click",function(){ var a=activeFlash();
+    if(a&&a.kind==="ACCT"){ flashMarkSeen(a.id); hideFlash(); openAccount(); return; } // drill: the COUNT is the acknowledgement
+    if(a) ackFlash(a); else hideFlash(); });
   $("coOk").addEventListener("click",function(){ $("clearOv").classList.add("hide"); });
   setInterval(checkFlash,1500);
 
@@ -1621,6 +1628,16 @@
     });
     state.board=board; saveBoardCache();                  // optimistic
     var rec={ id:"acct"+now.toString(36)+Math.random().toString(36).slice(2,6), platoon:state.platoon||"", _account:true };
+    // If a TOC accountability drill is running, ride the SAME push with the drill ack —
+    // platoon + count — so the TOC's rollup chip flips green the moment the count lands.
+    var did=""; try{ did=localStorage.getItem(LS_DRILL)||""; }catch(e){}
+    if(did){
+      if(!Array.isArray(board.flashAcks)) board.flashAcks=[];
+      board.flashAcks.push({ id:"ak"+String(did).replace(/[^a-z0-9]/gi,"").slice(0,18)+"-"+String(state.platoon||"x").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,12),
+        alert:did, platoon:state.platoon||"(no platoon)", n:present+"/"+people.length, time:stamp, _m:now });
+      try{ localStorage.removeItem(LS_DRILL); }catch(e){}
+      state.board=board; saveBoardCache();
+    }
     queueSend(board, rec, "account", "Accountability "+present+"/"+people.length);
     closeAccount(); render();
   }
@@ -1661,7 +1678,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.6"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.7"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

@@ -191,6 +191,15 @@
   .bk-modal[hidden]{display:none}
   .bk-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;max-width:540px;width:100%;max-height:88vh;overflow:auto;padding:16px}
   .bk-card-wide{max-width:720px}
+  /* First-run setup wizard */
+  .su-step{display:flex;gap:12px;align-items:flex-start;padding:12px 2px;border-bottom:1px solid var(--line-soft)}
+  .su-step:last-of-type{border-bottom:0}
+  .su-tick{flex:0 0 28px;height:28px;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;margin-top:2px}
+  .su-tick.ok{border-color:var(--ok,#39d98a);color:var(--ok,#39d98a)}
+  .su-body{flex:1;min-width:0}
+  .su-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center}
+  .su-row input{flex:1;min-width:180px}
+  .su-hint{color:var(--muted);font-size:12.5px}
   .aar-text{width:100%;min-height:52vh;font-family:var(--mono);font-size:12px;line-height:1.5;white-space:pre;overflow:auto;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:6px;color:var(--ink);padding:10px}
   /* AAR — rendered document */
   .aar-doc{max-height:60vh;overflow:auto;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:18px 20px}
@@ -1117,6 +1126,7 @@
   <div class="toolbar">
     <span class="awake-dot" id="awakeDot"><span class="d"></span>screen awake</span>
     <span class="save-note" id="saveNote">saved</span>
+    <button class="btn" id="btnSetup" title="Guided setup — camp name, weather location, Live Sync, roster import">Setup</button>
     <button class="btn" id="btnFull">Full screen</button>
     <button class="btn" id="btnCopy">Copy SITREP</button>
     <button class="btn" id="btnAar" title="Auto-filled after-action / end-of-day summary you can copy or download">Daily AAR</button>
@@ -1136,6 +1146,47 @@
     <a href="psg.html" target="_blank" rel="noopener"><span class="ico">📋</span>PSG Field View</a>
     <a href="medic.html" target="_blank" rel="noopener" class="xmedic"><span class="ico">🚑</span>Medic Dashboard</a>
   </nav>
+
+  <!-- FIRST-RUN SETUP WIZARD -->
+  <div id="setupModal" class="bk-modal" hidden>
+    <div class="bk-card">
+      <div class="bk-head"><h2>Set up the board</h2><button class="btn" id="suClose">Close</button></div>
+      <p class="bk-sub">Four quick steps and the board is camp-ready. Everything here is optional
+      and can be changed later on the board itself &mdash; reopen this anytime with the
+      <b>Setup</b> button in the toolbar.</p>
+      <div class="su-step">
+        <span class="su-tick" id="suTick1" data-n="1">1</span>
+        <div class="su-body"><b>Name the camp</b>
+          <div class="su-row"><input id="suName" placeholder="e.g., 2027 KYARNG Youth Camp" aria-label="Camp name"></div>
+        </div>
+      </div>
+      <div class="su-step">
+        <span class="su-tick" id="suTick2" data-n="2">2</span>
+        <div class="su-body"><b>Set the camp's location</b> <span class="su-hint">&mdash; powers the live weather and the automatic heat category</span>
+          <div class="su-row"><input id="suCoords" placeholder="lat, lon  (e.g., 37.8917, -85.9436)" aria-label="Camp coordinates">
+          <button class="btn2" id="suLocate">Use my location</button></div>
+        </div>
+      </div>
+      <div class="su-step">
+        <span class="su-tick" id="suTick3" data-n="3">3</span>
+        <div class="su-body"><b>Connect Live Sync</b> <span class="su-hint">&mdash; optional; one shared board across every laptop and phone (see SYNC-SETUP.md)</span>
+          <div class="su-row"><input id="suSync" placeholder="https://script.google.com/macros/s/…/exec" aria-label="Sync link">
+          <button class="btn2" id="suConnect">Connect</button></div>
+          <div class="su-hint">After connecting: <a href="#" id="suCheck">run the sync comms check</a> to prove the link end-to-end.</div>
+        </div>
+      </div>
+      <div class="su-step">
+        <span class="su-tick" id="suTick4" data-n="4">4</span>
+        <div class="su-body"><b>Load the roster</b> <span class="su-hint">&mdash; import the camp manifest as a CSV, or add people by hand later</span>
+          <div class="su-row"><button class="btn2" id="suImport">Import roster CSV</button>
+          <span class="su-hint" id="suRosterNote"></span></div>
+        </div>
+      </div>
+      <div class="bk-actions" style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn2" id="suDone">Done &mdash; open the board</button>
+      </div>
+    </div>
+  </div>
 
   <div id="aarModal" class="bk-modal" hidden>
     <div class="bk-card bk-card-wide">
@@ -3772,6 +3823,53 @@ var qrcode = function() {
       window.open("synccheck.html"+(u?"?sync="+encodeURIComponent(u):""),"_blank");
     });
   })();
+
+  // ---------- first-run setup wizard ----------
+  // Auto-opens once on a brand-new board; never blocks (every step is optional and
+  // just drives the board's own existing controls). Reopen with the toolbar Setup button.
+  const SETUP_KEY="kyarng-setup-seen";
+  let suTimer=null, suAutoPending=false; // set at init on a fresh board; fires after the start overlay is dismissed
+  function suRefresh(){
+    const tick=(id,ok)=>{ const el=$(id); if(!el) return;
+      el.classList.toggle("ok",!!ok); el.textContent=ok?"✓":el.dataset.n; };
+    tick("suTick1",(state.campName||"").trim()&&state.campName!=="KYARNG Youth Camp");
+    tick("suTick2",!!(state.wxCoords||"").trim());
+    tick("suTick3",syncConnected);
+    tick("suTick4",(state.roster||[]).length>0);
+    const n=(state.roster||[]).length, note=$("suRosterNote");
+    if(note) note.textContent=n?n+" people on the roster":"";
+  }
+  function suOpen(){
+    $("suName").value=(state.campName==="KYARNG Youth Camp")?"":(state.campName||"");
+    $("suCoords").value=state.wxCoords||"";
+    $("suSync").value=syncUrl||"";
+    suRefresh();
+    $("setupModal").hidden=false;
+    clearInterval(suTimer); suTimer=setInterval(suRefresh,1000); // ticks update as async steps land
+  }
+  function suClose(){
+    $("setupModal").hidden=true;
+    clearInterval(suTimer); suTimer=null;
+    try{ localStorage.setItem(SETUP_KEY,"1"); }catch(e){}
+  }
+  $("btnSetup").addEventListener("click",suOpen);
+  $("suClose").addEventListener("click",suClose);
+  $("suDone").addEventListener("click",suClose);
+  $("setupModal").addEventListener("click",e=>{ if(e.target===$("setupModal")) suClose(); });
+  $("suName").addEventListener("input",e=>{ state.campName=e.target.value; $("campName").value=state.campName;
+    const _st=$("soTitle"); if(_st) _st.textContent=state.campName||""; save(); suRefresh(); });
+  const suSetCoords=()=>{ $("wxCoords").value=$("suCoords").value.trim(); $("wxSet").click(); suRefresh(); };
+  $("suCoords").addEventListener("keydown",e=>{ if(e.key==="Enter") suSetCoords(); });
+  $("suCoords").addEventListener("blur",suSetCoords);
+  $("suLocate").addEventListener("click",()=>{ $("wxLocate").click();
+    // geolocation resolves async; mirror the result back into the wizard field when it lands
+    let n=0; const t=setInterval(()=>{ if(state.wxCoords){ $("suCoords").value=state.wxCoords; suRefresh(); clearInterval(t); } if(++n>20) clearInterval(t); },500); });
+  $("suConnect").addEventListener("click",()=>{ const u=$("suSync").value.trim(); if(!u) return;
+    $("syncUrl").value=u; syncConnect(u); });
+  $("suCheck").addEventListener("click",e=>{ e.preventDefault();
+    const u=$("suSync").value.trim()||syncUrl||"";
+    window.open("synccheck.html"+(u?"?sync="+encodeURIComponent(u):""),"_blank"); });
+  $("suImport").addEventListener("click",()=>$("rosterImportFile").click());
   // ---------- PSG share link + QR (points a phone at psg.html with the sync link pre-filled) ----------
   function psgShareLink(){
     let u=""; try{ u=localStorage.getItem(SYNC_KEY)||syncUrl||""; }catch(e){ u=syncUrl||""; }
@@ -5774,6 +5872,7 @@ var qrcode = function() {
     const ov=$("startOverlay"); if(ov) ov.style.display="none";
     if(goFull){ (fsEl.requestFullscreen||fsEl.webkitRequestFullscreen||function(){}).call(fsEl); }
     acquireWake();
+    if(suAutoPending){ suAutoPending=false; setTimeout(suOpen,250); } // first run: guided setup
   }
   $("soFull").addEventListener("click",()=>startBoard(true));
   $("soWindow").addEventListener("click",()=>startBoard(false));
@@ -5971,6 +6070,9 @@ var qrcode = function() {
     hydrateInputs();
     renderAll();
     setupCollapsibles();
+    // brand-new board on this computer → offer the guided setup once the start
+    // overlay is dismissed (it sits above every modal, so opening under it is useless)
+    try{ if(!loaded && !localStorage.getItem(SETUP_KEY)) suAutoPending=true; }catch(e){}
     wrRestore(); if(wr.running) wrTick(); else renderWR();  // resume a running work/rest cycle after reload
     tickClock(); setInterval(()=>{ tickClock(); syncFreshWatchdog(); },1000);
     setInterval(refreshSchedStatuses,30000); // advance schedule statuses as time passes

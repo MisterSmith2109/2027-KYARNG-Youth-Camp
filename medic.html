@@ -814,7 +814,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.9"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.10"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;
@@ -832,6 +832,10 @@
         .catch(function(){});
     }catch(e){}
   }
+  // tiny corner version badge — instantly answers "which version is this device running?"
+  try{ var vb=document.createElement("span"); vb.textContent="v"+APP_VERSION;
+    vb.style.cssText="position:fixed;right:6px;bottom:4px;z-index:70;font:700 10px ui-monospace,monospace;color:#8a93a0;opacity:.75;pointer-events:none";
+    document.body.appendChild(vb); }catch(e){}
   check(); setInterval(check,300000); // on load, then every 5 minutes
   document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
 })();

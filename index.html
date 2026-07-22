@@ -214,6 +214,7 @@
   .flash-warn{margin-top:10px;border:1px solid #f5b62c;border-radius:9px;padding:10px 12px;color:#ffd97a;font-size:13.5px}
   .flash-active.acct-done{border-color:#5fd257;background:#10231a}
   .flash-active.acct-done .fa-kind{color:#9fdc9f}
+  .fw-why{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:7px}
 
   /* Backups modal */
   .bk-modal{position:fixed;inset:0;background:rgba(8,9,6,.82);display:flex;align-items:center;justify-content:center;padding:18px;z-index:80}
@@ -786,8 +787,12 @@
           <button class="btn" id="flashCancel">Cancel alert (no all-clear)</button>
         </div>
       </div>
-      <div class="flash-warn hide" id="flashWarn">⚠ The alert isn't coming back from the sync server — the deployed
-      <b>sync/Code.gs</b> is an older version. Redeploy it (Deploy → Manage deployments → New version), then send again.</div>
+      <div class="flash-warn hide" id="flashWarn">⚠ The alert isn't coming back from the sync server — the <b>sync link
+      this board is connected to</b> is running an older <b>sync/Code.gs</b>. Make sure you updated the deployment for
+      <i>this exact link</i> (Deploy → Manage deployments → ✏️ → New version — if you see more than one deployment
+      listed, each has its own /exec URL). Then send again.
+      <div class="fw-why" id="flashWarnWhy"></div>
+      <button class="btn" id="flashWarnX" style="margin-top:8px">Dismiss</button></div>
     </div>
   </div>
 
@@ -5345,9 +5350,16 @@ var qrcode = function() {
     const present=((syncBase&&syncBase.flashAlerts)||[]).some(x=>x&&x.id===flashWatchId);
     if(present){ flashWatchId=""; w.classList.add("hide"); return; }
     const age=Date.now()-flashWatchAt;
-    if(age>15000) w.classList.remove("hide");
+    if(age>15000){
+      w.classList.remove("hide");
+      const why=$("flashWarnWhy");
+      if(why) why.textContent="alert …"+String(flashWatchId).slice(-4)+" sent "+flashAgeTxt(age)+" ago · server last answered "
+        +(syncLastApplyAt?flashAgeTxt(Date.now()-syncLastApplyAt)+" ago":"never")
+        +" · this board's link ends …"+String(syncUrl||"").replace(/\/exec.*$/,"").slice(-10)+"/exec";
+    }
     if(age>600000){ flashWatchId=""; w.classList.add("hide"); }
   }
+  (function(){ const x=$("flashWarnX"); if(x) x.addEventListener("click",()=>{ flashWatchId=""; $("flashWarn").classList.add("hide"); }); })();
   document.querySelectorAll(".flash-btn").forEach(b=>{
     b.addEventListener("click",()=>sendFlash(b.getAttribute("data-flash"), b.getAttribute("data-txt")));
   });
@@ -6286,7 +6298,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.9"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.10"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;
@@ -6304,6 +6316,10 @@ var qrcode = function() {
         .catch(function(){});
     }catch(e){}
   }
+  // tiny corner version badge — instantly answers "which version is this device running?"
+  try{ var vb=document.createElement("span"); vb.textContent="v"+APP_VERSION;
+    vb.style.cssText="position:fixed;right:6px;bottom:4px;z-index:70;font:700 10px ui-monospace,monospace;color:#8a93a0;opacity:.75;pointer-events:none";
+    document.body.appendChild(vb); }catch(e){}
   check(); setInterval(check,300000); // on load, then every 5 minutes
   document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
 })();

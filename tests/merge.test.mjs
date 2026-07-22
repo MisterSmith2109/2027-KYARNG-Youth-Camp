@@ -252,6 +252,37 @@ function freshBoard() {
   check("merging a board with itself is a no-op", strip(again) === strip(stored));
 }
 
+// ---------- 9. FLASH alerts: broadcast + simultaneous acks from two phones ----------
+{
+  // TOC sends the alert through the stamped client path (flashAlerts is in SYNC_LISTS)
+  let stored = mergeBoards(null, freshBoard(), T0);
+  const toc = makeDevice(); toc.pull(stored);
+  toc.state().flashAlerts = [{ id: "fa1", kind: "LIGHTNING", text: "shelter now", canceled: false }];
+  stored = mergeBoards(stored, toc.push(T0 + 1000), T0 + 1000);
+  check("a FLASH alert sent from the TOC survives the merge",
+    (stored.flashAlerts || []).some(a => a.id === "fa1"), JSON.stringify(stored.flashAlerts));
+
+  // Two phones ack at the same instant — each ack is its own record, so neither clobbers the other.
+  // (Phones push raw boards with self-stamped records, exactly like psg/medic queueSend does.)
+  const ackA = { ...deep(stored), flashAcks: [{ id: "ak-fa1-alpha", alert: "fa1", platoon: "Alpha", _m: T0 + 2000 }] };
+  const ackB = { ...deep(stored), flashAcks: [{ id: "ak-fa1-medic", alert: "fa1", platoon: "Medic", _m: T0 + 2000 }] };
+  stored = mergeBoards(stored, ackA, T0 + 2001);
+  stored = mergeBoards(stored, ackB, T0 + 2002);
+  const platoons = (stored.flashAcks || []).map(k => k.platoon).sort();
+  check("simultaneous acks from two phones both survive",
+    platoons.join(",") === "Alpha,Medic", "acks: " + platoons.join(","));
+
+  // All-clear: TOC cancels the alert; a phone that pushes its stale board (alert still
+  // uncanceled) must NOT resurrect the alarm — the newer canceled edit wins.
+  const stalePhone = deep(stored); // phone board from before the cancel
+  const toc2 = makeDevice(); toc2.pull(stored);
+  toc2.state().flashAlerts.forEach(a => { a.canceled = true; });
+  stored = mergeBoards(stored, toc2.push(T0 + 5000), T0 + 5000);
+  stored = mergeBoards(stored, stalePhone, T0 + 6000);
+  check("a canceled FLASH stays canceled when a stale phone re-pushes",
+    stored.flashAlerts.every(a => a.canceled), JSON.stringify(stored.flashAlerts));
+}
+
 // ---------- summary ----------
 console.log("\n" + passed + " passed, " + failed + " failed");
 process.exit(failed ? 1 : 0);

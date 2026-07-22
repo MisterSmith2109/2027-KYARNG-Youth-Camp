@@ -186,6 +186,27 @@
   .inc-row .rm{line-height:1.4;min-height:32px;overflow:hidden;resize:vertical;white-space:pre-wrap;word-break:break-word}
   .inc-empty{color:var(--muted);font-family:var(--mono);font-size:13px;padding:8px 2px}
 
+  /* FLASH alert panel */
+  #flashPanel{border-color:#7a3a30}
+  .flash-presets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px}
+  .flash-btn{min-height:46px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-weight:800;font-size:14px;cursor:pointer}
+  .flash-btn.fp-ltg{border-color:#f5b62c;color:#ffd97a}
+  .flash-btn.fp-wx{border-color:#57bde0;color:#a8d4e6}
+  .flash-btn.fp-heat{border-color:#f4553b;color:#ffb3a3}
+  .flash-btn.fp-recall{border-color:#9aab52;color:#c6dc6e}
+  .flash-customrow{display:flex;gap:8px;flex-wrap:wrap}
+  .flash-customrow input{flex:1;min-width:200px}
+  .flash-active{margin-top:12px;border:2px solid var(--red,#f4553b);border-radius:10px;padding:12px;background:#241210}
+  .fa-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .fa-kind{font-family:var(--mono);font-weight:800;letter-spacing:.1em;color:#ffb3a3}
+  .fa-age{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .fa-text{font-size:17px;font-weight:800;margin:6px 0 8px}
+  .fa-acks{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .fa-chip{font-family:var(--mono);font-size:11px;font-weight:800;padding:4px 9px;border-radius:14px;border:1px solid var(--line);color:var(--muted)}
+  .fa-chip.ok{border-color:#5fd257;color:#9fdc9f;background:#10231a}
+  .flash-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .flash-warn{margin-top:10px;border:1px solid #f5b62c;border-radius:9px;padding:10px 12px;color:#ffd97a;font-size:13.5px}
+
   /* Backups modal */
   .bk-modal{position:fixed;inset:0;background:rgba(8,9,6,.82);display:flex;align-items:center;justify-content:center;padding:18px;z-index:80}
   .bk-modal[hidden]{display:none}
@@ -728,6 +749,37 @@
       <span class="t-label">Accountability</span>
       <div class="t-val" id="valAcc">--%</div>
       <div class="t-sub" id="accSub">0 / 0 present</div>
+    </div>
+  </div>
+
+  <!-- FLASH ALERT — camp-wide broadcast to every connected phone -->
+  <div class="panel" id="flashPanel">
+    <div class="panel-head"><h2>⚡ FLASH Alert</h2><span class="hint">every connected phone alarms</span></div>
+    <div class="panel-body">
+      <div class="panel-sub">One tap sends a full-screen alarm — chime and vibration — to every PSG, medic, and
+      command phone on the sync link, with live acknowledgements below. Needs Live Sync connected and the
+      updated <b>sync/Code.gs</b> deployed.</div>
+      <div class="flash-presets">
+        <button class="flash-btn fp-ltg" data-flash="LIGHTNING" data-txt="LIGHTNING — get everyone under hard shelter NOW">⚡ Lightning</button>
+        <button class="flash-btn fp-wx" data-flash="SEVERE WEATHER" data-txt="SEVERE WEATHER — shelter in place, await instructions">🌪 Severe Wx</button>
+        <button class="flash-btn fp-heat" data-flash="HEAT" data-txt="HEAT — suspend strenuous activity, shade and water now">🥵 Heat — suspend</button>
+        <button class="flash-btn fp-recall" data-flash="RECALL" data-txt="RECALL — bring your platoon to the assembly area now">📢 Recall</button>
+      </div>
+      <div class="flash-customrow">
+        <input id="flashCustom" placeholder="Custom message… (sent as FLASH)" maxlength="140">
+        <button class="btn2" id="flashSend">Send FLASH</button>
+      </div>
+      <div class="flash-active hide" id="flashActive">
+        <div class="fa-head"><span class="fa-kind" id="faKind">—</span><span class="fa-age" id="faAge"></span></div>
+        <div class="fa-text" id="faText">—</div>
+        <div class="fa-acks" id="faAcks"></div>
+        <div class="flash-actions">
+          <button class="btn2" id="flashClear">✅ Send ALL CLEAR</button>
+          <button class="btn" id="flashCancel">Cancel alert (no all-clear)</button>
+        </div>
+      </div>
+      <div class="flash-warn hide" id="flashWarn">⚠ The alert isn't coming back from the sync server — the deployed
+      <b>sync/Code.gs</b> is an older version. Redeploy it (Deploy → Manage deployments → New version), then send again.</div>
     </div>
   </div>
 
@@ -3608,6 +3660,8 @@ var qrcode = function() {
     if(!Array.isArray(st.dcScores)) st.dcScores=[];
     if(!Array.isArray(st.psgAars)) st.psgAars=[];
     if(!Array.isArray(st.campLog)) st.campLog=[];
+    if(!Array.isArray(st.flashAlerts)) st.flashAlerts=[];
+    if(!Array.isArray(st.flashAcks)) st.flashAcks=[];
     if(!st.campAar||typeof st.campAar!=="object") st.campAar=defaults().campAar;
     else st.campAar=Object.assign(defaults().campAar, st.campAar);
     // safe-merge sync bookkeeping: give list records stable ids; keep the merge maps
@@ -3683,7 +3737,7 @@ var qrcode = function() {
   let syncPollTimer=null, syncPushTimer=null, syncLastRev=-1, syncApplying=false, syncConnected=false, syncPushPending=false;
   let syncLastPullAt=0, syncLastPullTry=0; // freshness contract: when the board was last CONFIRMED against the server
   // --- safe-merge metadata (mirrors the rules in sync/Code.gs) ---
-  const SYNC_LISTS=["roster","incidents","sensitive","gsas","heatCas","supplyRequests","rfis"];
+  const SYNC_LISTS=["roster","incidents","sensitive","gsas","heatCas","supplyRequests","rfis","flashAlerts","flashAcks"];
   const SYNC_SECTIONS={
     header:["campName","day","oic","nco","wx","wxCoords","volLabel","vol","gsaLabel"],
     wbgt:["wbgt","wbgtAuto"],
@@ -5204,6 +5258,79 @@ var qrcode = function() {
     };
     rd.readAsText(f);
   });
+
+  // ---------- FLASH alerts: camp-wide broadcast every field phone alarms on ----------
+  // One alert active at a time (sending a new one cancels the last). Acks come back as
+  // separate flashAcks records — one per platoon/role — so two phones acknowledging at
+  // the same moment can never clobber each other in the merge.
+  const FLASH_ACTIVE_MS=6*3600000; // an alert older than 6h never alarms a reconnecting phone
+  let flashWatchId="", flashWatchAt=0;
+  function flashActiveAlert(){
+    const now=Date.now(); let best=null;
+    (state.flashAlerts||[]).forEach(a=>{
+      if(!a||a.canceled||a.kind==="ALLCLEAR") return;
+      if(now-(+a._m||0)>FLASH_ACTIVE_MS) return;
+      if(!best||(+a._m||0)>(+best._m||0)) best=a;
+    });
+    return best;
+  }
+  function sendFlash(kind,text){
+    text=String(text||"").trim(); if(!text) return;
+    state.flashAlerts=state.flashAlerts||[]; state.flashAcks=state.flashAcks||[];
+    state.flashAlerts.forEach(a=>{ if(a&&!a.canceled){ a.canceled=true; a._m=Date.now(); } });
+    const rec={id:newId(),kind:kind||"FLASH",text:text,time:hhmmLocal(),by:state.oic||"TOC",canceled:false,_m:Date.now()};
+    state.flashAlerts.push(rec);
+    flashWatchId=rec.id; flashWatchAt=Date.now();
+    $("flashWarn").classList.add("hide");
+    save(); renderFlash();
+  }
+  function sendAllClear(){
+    state.flashAlerts=state.flashAlerts||[];
+    state.flashAlerts.forEach(a=>{ if(a&&!a.canceled){ a.canceled=true; a._m=Date.now(); } });
+    state.flashAlerts.push({id:newId(),kind:"ALLCLEAR",text:"ALL CLEAR — resume normal operations",time:hhmmLocal(),by:state.oic||"TOC",canceled:false,_m:Date.now()});
+    flashWatchId=""; save(); renderFlash();
+  }
+  function cancelFlash(){
+    state.flashAlerts=state.flashAlerts||[];
+    state.flashAlerts.forEach(a=>{ if(a&&!a.canceled){ a.canceled=true; a._m=Date.now(); } });
+    flashWatchId=""; save(); renderFlash();
+  }
+  function flashAgeTxt(ms){ const s=Math.max(0,Math.round(ms/1000)); if(s<60) return s+"s"; const m=Math.round(s/60); if(m<60) return m+"m"; return Math.round(m/6)/10+"h"; }
+  function renderFlash(){
+    const box=$("flashActive"); if(!box) return;
+    const a=flashActiveAlert();
+    if(!a){ box.classList.add("hide"); return; }
+    box.classList.remove("hide");
+    $("faKind").textContent="⚡ "+(a.kind||"FLASH")+" · sent "+(a.time||"")+(a.by?" by "+a.by:"");
+    $("faAge").textContent=flashAgeTxt(Date.now()-(+a._m||0))+" ago";
+    $("faText").textContent=a.text||"";
+    // acks: every platoon plus the medic team; green chip once its ack record arrives
+    const acked={}; (state.flashAcks||[]).forEach(k=>{ if(k&&k.alert===a.id&&k.platoon) acked[String(k.platoon)]=k.time||true; });
+    const expected=(state.platoons||[]).map(p=>p&&p.name).filter(Boolean).concat(["Medic"]);
+    const wrap=$("faAcks"); wrap.innerHTML="";
+    expected.forEach(nm=>{
+      const c=document.createElement("span");
+      c.className="fa-chip"+(acked[nm]?" ok":"");
+      c.textContent=(acked[nm]?"✓ ":"")+nm+(typeof acked[nm]==="string"?" "+acked[nm]:"");
+      wrap.appendChild(c);
+    });
+    Object.keys(acked).forEach(nm=>{ if(expected.indexOf(nm)<0){ const c=document.createElement("span"); c.className="fa-chip ok"; c.textContent="✓ "+nm; wrap.appendChild(c); } });
+    // outdated-backend detection: we pushed the alert, polls have replaced local state with the
+    // server's merged board, and the alert never came back -> the deployed Code.gs predates FLASH.
+    if(flashWatchId && syncConnected && Date.now()-flashWatchAt>15000){
+      const present=(state.flashAlerts||[]).some(x=>x&&x.id===flashWatchId);
+      if(!present) $("flashWarn").classList.remove("hide");
+      else flashWatchId="";
+    }
+  }
+  document.querySelectorAll(".flash-btn").forEach(b=>{
+    b.addEventListener("click",()=>sendFlash(b.getAttribute("data-flash"), b.getAttribute("data-txt")));
+  });
+  $("flashSend").addEventListener("click",()=>{ const t=$("flashCustom").value.trim(); if(!t){ $("flashCustom").focus(); return; } sendFlash("FLASH",t); $("flashCustom").value=""; });
+  $("flashCustom").addEventListener("keydown",e=>{ if(e.key==="Enter") $("flashSend").click(); });
+  $("flashClear").addEventListener("click",sendAllClear);
+  $("flashCancel").addEventListener("click",cancelFlash);
+  setInterval(renderFlash,1000);
   $("addSch").addEventListener("click",()=>{ const s=curSched(); if(!s) return; s.push({time:"",activity:"",loc:"",status:"Upcoming"}); renderSchedule(); save(); });
 
   // platoon controls
@@ -6130,7 +6257,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.6"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

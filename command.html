@@ -40,6 +40,16 @@
   .sec-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
   .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;padding:6px}
 
+  /* FLASH banner */
+  .flashcard{border:2px solid var(--red);background:#241210}
+  .flashcard.allclear{border-color:var(--green);background:#10231a}
+  .fc-k{font-family:var(--mono);font-weight:800;letter-spacing:.14em;color:#ffb3a3}
+  .flashcard.allclear .fc-k{color:#9fdc9f}
+  .fc-text{font-size:17px;font-weight:800;margin:4px 0 8px}
+  .fc-acks{display:flex;gap:6px;flex-wrap:wrap}
+  .fc-chip{font-family:var(--mono);font-size:11px;font-weight:800;padding:3px 8px;border-radius:13px;border:1px solid var(--line);color:var(--muted)}
+  .fc-chip.ok{border-color:var(--green);color:#9fdc9f;background:#10231a}
+
   /* glance tiles */
   .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
   .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
@@ -158,6 +168,12 @@
   </header>
 
   <div class="card freshbar hide" id="freshBar"><b id="freshBarK">DATA MAY BE OLD</b><span id="freshBarTxt"></span></div>
+
+  <div class="card flashcard hide" id="flashCard">
+    <div class="sec-hd"><span class="fc-k" id="fcKind">⚡ FLASH</span><span class="k" id="fcAge"></span></div>
+    <div class="fc-text" id="fcText">—</div>
+    <div class="fc-acks" id="fcAcks"></div>
+  </div>
 
   <div class="tiles">
     <div class="tile" id="tileAcct"><div class="t-k">Accountability</div><div class="t-val" id="acctVal">—</div><div class="t-sub" id="acctSub">connect to see the board</div></div>
@@ -381,6 +397,49 @@
   document.addEventListener("visibilitychange",function(){ if(!document.hidden){ pull(); } });
   window.addEventListener("focus",function(){ pull(); });
   window.addEventListener("online",function(){ pull(); });
+
+  // ---------- FLASH banner (read-only: shows the alert + which platoons have acked) ----------
+  var FLASH_ACTIVE_MS=6*3600000, ALLCLEAR_SHOW_MS=10*60000, flashChimedId="";
+  function flashBeep(){ try{ var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; var c=new AC(),o=c.createOscillator(),g=c.createGain();
+    o.type="square"; o.frequency.value=920; o.connect(g); g.connect(c.destination); g.gain.setValueAtTime(0.001,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.3,c.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.5);
+    o.start(); o.stop(c.currentTime+0.52); setTimeout(function(){ try{ c.close(); }catch(e){} },700); }catch(e){} }
+  function newestFlash(kindAllClear){
+    var b=state.board, now=Date.now(), best=null, win=kindAllClear?ALLCLEAR_SHOW_MS:FLASH_ACTIVE_MS;
+    ((b&&b.flashAlerts)||[]).forEach(function(a){
+      if(!a||a.canceled) return;
+      if(kindAllClear ? a.kind!=="ALLCLEAR" : a.kind==="ALLCLEAR") return;
+      if(now-(+a._m||0)>win) return;
+      if(!best||(+a._m||0)>(+best._m||0)) best=a;
+    });
+    return best;
+  }
+  function renderFlash(){
+    var card=$("flashCard"); if(!card) return;
+    var b=state.board, a=newestFlash(false), ac=newestFlash(true);
+    if(a){
+      card.classList.remove("hide","allclear");
+      $("fcKind").textContent="⚡ "+(a.kind||"FLASH")+" · sent "+(a.time||"");
+      var ageS=Math.max(0,Math.round((Date.now()-(+a._m||0))/1000));
+      $("fcAge").textContent=(ageS<60?ageS+"s":Math.round(ageS/60)+"m")+" ago";
+      $("fcText").textContent=a.text||"";
+      var acked={}; ((b&&b.flashAcks)||[]).forEach(function(k){ if(k&&k.alert===a.id&&k.platoon) acked[String(k.platoon)]=k.time||true; });
+      var expected=((b&&b.platoons)||[]).map(function(p){ return p&&p.name; }).filter(Boolean).concat(["Medic"]);
+      var wrap=$("fcAcks"); wrap.innerHTML="";
+      var n=0;
+      expected.forEach(function(nm){ var c=document.createElement("span");
+        var ok=!!acked[nm]; if(ok) n++;
+        c.className="fc-chip"+(ok?" ok":""); c.textContent=(ok?"✓ ":"")+nm; wrap.appendChild(c); });
+      if(flashChimedId!==a.id){ flashChimedId=a.id; flashBeep(); try{ if(navigator.vibrate) navigator.vibrate([250,100,250]); }catch(e){} }
+    } else if(ac){
+      card.classList.remove("hide"); card.classList.add("allclear");
+      $("fcKind").textContent="✅ ALL CLEAR · "+(ac.time||"");
+      $("fcAge").textContent="";
+      $("fcText").textContent=ac.text||"Resume normal operations";
+      $("fcAcks").innerHTML="";
+    } else card.classList.add("hide");
+  }
+  setInterval(renderFlash,1500);
 
   // ---------- accountability by platoon ----------
   // A person belongs to a platoon when their roster Group matches the platoon's name
@@ -730,7 +789,7 @@
 <script>
 // ---------- app-version check: no phone can keep running an outdated cached page ----------
 (function(){
-  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.6"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

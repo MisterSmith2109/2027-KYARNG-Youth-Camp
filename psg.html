@@ -188,6 +188,17 @@
   .chip{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:13px;padding:6px 11px;border-radius:16px;min-height:36px}
   .chip:active{background:var(--line-soft)}
   .hs-warn{background:var(--red);color:#2a0d08;font-weight:700;font-size:13px;padding:10px 12px;border-radius:9px;margin-bottom:12px}
+  /* FLASH full-screen alarm */
+  .flashov{position:fixed;inset:0;z-index:300;background:#7a1408;color:#fff;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;padding:26px;gap:14px;animation:foPulse 1.1s ease-in-out infinite}
+  .flashov.allclear{background:#0f4d2a;animation:none}
+  @keyframes foPulse{0%,100%{background:#7a1408}50%{background:#a12613}}
+  .fo-kind{font-family:var(--mono);font-size:16px;font-weight:800;letter-spacing:.3em}
+  .fo-text{font-size:26px;font-weight:800;line-height:1.25;max-width:22ch}
+  .fo-meta{font-family:var(--mono);font-size:13px;opacity:.85}
+  .fo-ack{min-height:60px;min-width:240px;border-radius:14px;border:3px solid #fff;background:rgba(255,255,255,.12);
+    color:#fff;font-size:20px;font-weight:800;cursor:pointer}
+  @media (prefers-reduced-motion:reduce){.flashov{animation:none}}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#0f1a0e;font-weight:700;
     padding:11px 18px;border-radius:10px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
   .toast.show{opacity:1}
@@ -293,6 +304,19 @@
   </div>
 
   <div class="card announce hide" id="annCard"><span class="ann-i">NOTICE</span><span id="annText"></span></div>
+
+  <!-- FLASH alert: full-screen alarm from the TOC -->
+  <div class="flashov hide" id="flashOv" role="alertdialog" aria-live="assertive">
+    <div class="fo-kind" id="foKind">⚡ FLASH</div>
+    <div class="fo-text" id="foText">—</div>
+    <div class="fo-meta" id="foMeta"></div>
+    <button class="fo-ack" id="foAck">✔ ACKNOWLEDGE</button>
+  </div>
+  <div class="flashov allclear hide" id="clearOv" role="alert">
+    <div class="fo-kind">✅ ALL CLEAR</div>
+    <div class="fo-text" id="coText">Resume normal operations</div>
+    <button class="fo-ack" id="coOk">OK</button>
+  </div>
 
 
   <div class="card">
@@ -582,7 +606,8 @@
   })();
   var LS_URL="kyarng27-psg-url", LS_PLT="kyarng27-psg-platoon", LS_WR="kyarng27-psg-wr",
       LS_OUTBOX="kyarng27-psg-outbox", LS_BOARD="kyarng27-psg-board",
-      LS_NOTIFY="kyarng27-psg-notify", LS_ALERTED="kyarng27-psg-alerted", LS_NOTES="kyarng27-psg-notes";
+      LS_NOTIFY="kyarng27-psg-notify", LS_ALERTED="kyarng27-psg-alerted", LS_NOTES="kyarng27-psg-notes",
+      LS_FLASH="kyarng27-psg-flashseen";
   var ALERT_LEAD=10; // minutes before an event to alert
   var HC_TYPES=["Heat cramps","Heat exhaustion","Heat stroke","Other / precaution"]; // must match index.html
   var INC_QUICK=["Injury","Illness","Missing camper","Behavior","Dehydration","Other"];
@@ -715,6 +740,78 @@
   document.addEventListener("visibilitychange",function(){ if(!document.hidden){ pull(); } });
   window.addEventListener("focus",function(){ pull(); });
   window.addEventListener("online",function(){ pull(); flushOutbox(); });
+
+  // ---------- FLASH alerts from the TOC (full-screen alarm until acknowledged) ----------
+  var FLASH_ACTIVE_MS=6*3600000, ALLCLEAR_SHOW_MS=10*60000;
+  var flashAlarmTimer=null, flashAlarmCount=0, flashShowingId="";
+  function flashSeen(){ try{ var o=JSON.parse(localStorage.getItem(LS_FLASH)||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
+  function flashMarkSeen(id){ var o=flashSeen(); o[id]=Date.now(); var ks=Object.keys(o); if(ks.length>50){ ks.sort(function(a,b){return o[a]-o[b];}).slice(0,ks.length-50).forEach(function(k){ delete o[k]; }); } try{ localStorage.setItem(LS_FLASH,JSON.stringify(o)); }catch(e){} }
+  function flashBeep(){ try{ var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; var c=new AC();
+    [0,0.28].forEach(function(off){ var o=c.createOscillator(),g=c.createGain(); o.type="square"; o.frequency.value=880+(off?220:0);
+      o.connect(g); g.connect(c.destination); g.gain.setValueAtTime(0.001,c.currentTime+off);
+      g.gain.exponentialRampToValueAtTime(0.35,c.currentTime+off+0.02); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+off+0.24);
+      o.start(c.currentTime+off); o.stop(c.currentTime+off+0.26); });
+    setTimeout(function(){ try{ c.close(); }catch(e){} },800);
+  }catch(e){} }
+  function flashAlarm(){
+    flashBeep(); try{ if(navigator.vibrate) navigator.vibrate([300,120,300]); }catch(e){}
+    if(++flashAlarmCount<12){ flashAlarmTimer=setTimeout(flashAlarm,4000); } // ~45s of alarm, then silent but still on screen
+  }
+  function activeFlash(){
+    var b=state.board, now=Date.now(), best=null;
+    ((b&&b.flashAlerts)||[]).forEach(function(a){
+      if(!a||a.canceled||a.kind==="ALLCLEAR") return;
+      if(now-(+a._m||0)>FLASH_ACTIVE_MS) return;
+      if(!best||(+a._m||0)>(+best._m||0)) best=a;
+    });
+    return best;
+  }
+  function latestAllClear(){
+    var b=state.board, now=Date.now(), best=null;
+    ((b&&b.flashAlerts)||[]).forEach(function(a){
+      if(!a||a.kind!=="ALLCLEAR"||a.canceled) return;
+      if(now-(+a._m||0)>ALLCLEAR_SHOW_MS) return;
+      if(!best||(+a._m||0)>(+best._m||0)) best=a;
+    });
+    return best;
+  }
+  function ackFlash(a){
+    flashMarkSeen(a.id);
+    var c=campNow();
+    var rec={ id:"ak"+String(a.id).replace(/[^a-z0-9]/gi,"").slice(0,18)+"-"+String(state.platoon||"x").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,12),
+      alert:a.id, platoon:state.platoon||"(no platoon)", time:pad(c.h)+":"+pad(c.m), _m:Date.now() };
+    var board=snapshotWith("flashAcks", rec); state.board=board; saveBoardCache();
+    queueSend(board, rec, "flashack", "Acknowledgement");
+    hideFlash();
+  }
+  function hideFlash(){ $("flashOv").classList.add("hide"); flashShowingId=""; clearTimeout(flashAlarmTimer); flashAlarmTimer=null; }
+  function checkFlash(){
+    var seen=flashSeen();
+    var a=activeFlash();
+    if(a && !seen[a.id]){
+      if(flashShowingId!==a.id){
+        flashShowingId=a.id;
+        $("foKind").textContent="⚡ "+(a.kind||"FLASH");
+        $("foText").textContent=a.text||"";
+        $("foMeta").textContent="from TOC · sent "+(a.time||"");
+        $("flashOv").classList.remove("hide");
+        flashAlarmCount=0; clearTimeout(flashAlarmTimer); flashAlarm();
+        if(alertsEnabled&&alertsEnabled()){ try{ new Notification("⚡ FLASH — "+(a.kind||""),{body:a.text||"",tag:"flash-"+a.id}); }catch(e){} }
+      }
+    } else if(flashShowingId && (!a || a.id!==flashShowingId)){
+      hideFlash(); // canceled or superseded at the TOC
+    }
+    var ac=latestAllClear();
+    if(ac && !seen[ac.id] && !a){
+      flashMarkSeen(ac.id);
+      $("coText").textContent=ac.text||"Resume normal operations";
+      $("clearOv").classList.remove("hide");
+      flashBeep(); try{ if(navigator.vibrate) navigator.vibrate(200); }catch(e){}
+    }
+  }
+  $("foAck").addEventListener("click",function(){ var a=activeFlash(); if(a) ackFlash(a); else hideFlash(); });
+  $("coOk").addEventListener("click",function(){ $("clearOv").classList.add("hide"); });
+  setInterval(checkFlash,1500);
 
   // ---------- outbox: everything the phone SENDS goes through here, queued + auto-retried ----------
   // Each item stores a full board snapshot with the new record already appended. The server merges
@@ -1564,7 +1661,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.5"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.6"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

@@ -41,6 +41,22 @@ Also new for 2027:
 - **Deletes stick for the whole camp** — deletion tombstones now live 14 days
   (was 24 hours), so a phone that slept through a roster delete can no longer
   resurrect the record when it reconnects later in the week.
+- **⚡ FLASH Alert** — a camp-wide emergency broadcast. On the TOC board's
+  **FLASH Alert** panel, one tap on a preset (**Lightning · Severe Wx · Heat —
+  suspend · Recall**, or a custom message) throws a **full-screen, pulsing,
+  chiming, vibrating alarm** onto every connected PSG and medic phone until the
+  holder taps **ACKNOWLEDGE** (the alarm chimes for ~45 s, then stays on screen).
+  Acknowledgements flow back live: the TOC panel and the Command Team view show
+  a chip per platoon (plus Medic) turning green with the time it acked — so
+  command can see in seconds which platoons have the word and which to chase.
+  **Send ALL CLEAR** stands everyone down with a green banner; *Cancel* ends the
+  alert quietly. One alert is active at a time; a phone that was asleep still
+  alarms when it reconnects (alerts stay live for 6 hours or until cleared).
+  Each phone acks as its own record, so simultaneous acknowledgements can never
+  overwrite each other.
+  **Requires redeploying `sync/Code.gs`** (Deploy → Manage deployments →
+  New version) — the TOC panel warns you if the deployed script is too old,
+  and the comms check now has a **FLASH-capable backend** step that proves it.
 - **Command Team view (`command.html`)** — a read-only phone/tablet page for
   the command team and staff, replacing the old "Lifeline" pseudo-platoon on
   the PSG page. One screen shows the whole camp live: **accountability by

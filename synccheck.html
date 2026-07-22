@@ -71,6 +71,7 @@
     ["post",    "Write accepted",             "a test record posted and visible on the next read"],
     ["race",    "Two writers at once",        "two records posted simultaneously — both must survive"],
     ["del",     "Delete sticks",              "test record deleted; a stale re-push must NOT resurrect it"],
+    ["flash",   "FLASH-capable backend",      "a flashAlerts record survives the merge — catches an old Code.gs"],
     ["clean",   "Clean up",                   "all test records removed from the board"],
     ["lat",     "Latency",                    "round-trip time of a read (3 samples)"]
   ];
@@ -192,6 +193,24 @@
       }).then(function(env){
         if(inRoster(env,ID1)) throw new Error("deleted record came back — is the OLD Code.gs still deployed? Redeploy sync/Code.gs as a New version.");
         mark("del","ok","PASS","delete held, stale re-push was rejected (tombstone live)");
+      });
+    }).then(function(){
+      // 4b. FLASH support: the probe is pre-canceled so it can never alarm a real phone.
+      mark("flash","run","…");
+      var FID="chk-"+runTag+"-flash", tF=Date.now();
+      return postBoard(url,{ flashAlerts:[{id:FID,kind:"TEST",text:"sync check probe",canceled:true,_m:tF}], _m:{}, _tomb:{} }).then(function(){
+        return pollUntil(url,function(env){
+          var arr=(env.board&&env.board.flashAlerts)||[];
+          for(var i=0;i<arr.length;i++){ if(arr[i]&&arr[i].id===FID) return true; }
+          return false;
+        },6,1500).then(function(){
+          var tomb={ flashAlerts:{} }; tomb.flashAlerts[FID]=Date.now();
+          return postBoard(url,{ flashAlerts:[], _m:{}, _tomb:tomb });
+        }).then(function(){
+          mark("flash","ok","PASS","deployed Code.gs merges FLASH alerts");
+        }).catch(function(){
+          throw new Error("the deployed Code.gs predates FLASH alerts — redeploy sync/Code.gs as a New version, then re-run");
+        });
       });
     }).then(function(){
       // 5. clean up the race records

@@ -41,6 +41,15 @@ Also new for 2027:
 - **Deletes stick for the whole camp** — deletion tombstones now live 14 days
   (was 24 hours), so a phone that slept through a roster delete can no longer
   resurrect the record when it reconnects later in the week.
+- **Sync comms check (`synccheck.html`)** — a one-tap pre-camp test of the
+  deployed sync backend, run from any device: reachability, a write read back,
+  two simultaneous writers (both must survive the merge), delete durability
+  (a stale re-push must not resurrect a deleted record — catches an old
+  `Code.gs` still deployed), and read latency. It adds clearly-marked test
+  records and removes them again; real board data is untouched. Open it from
+  the **Live Sync** panel ("run the sync comms check") or directly with
+  `synccheck.html?sync=<exec url>`. Run it once from a TOC laptop and once
+  from a phone on the field network before campers arrive.
 - **Roster CSV import** — in *Roster · Sign-In*, **⬆ Import roster CSV** loads
   the whole camp from a spreadsheet export instead of typing names. It
   auto-detects columns (`Name` or `First/Last Name`, `Platoon`/`Group`,

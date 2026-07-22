@@ -1108,6 +1108,9 @@
         <span class="sync-dot" id="syncDot"></span>
         <span class="sync-status" id="syncStatus">not connected</span>
       </div>
+      <div class="panel-sub" style="margin-top:8px">Before camp, prove the link works end-to-end:
+        <a href="#" id="syncCheckLink">run the sync comms check</a> — it tests reachability, merge,
+        simultaneous writes, and delete durability from this device, then cleans up after itself.</div>
     </div>
   </div>
 
@@ -3761,6 +3764,14 @@ var qrcode = function() {
     syncSetStatus("not connected","");
     renderPsgShare();
   }
+  // Comms check opens with whatever link is connected or typed, so it can be
+  // proven BEFORE pressing Connect on a camp of live devices.
+  (function(){ const a=$("syncCheckLink"); if(!a) return;
+    a.addEventListener("click",e=>{ e.preventDefault();
+      const u=syncUrl||($("syncUrl")&&$("syncUrl").value.trim())||"";
+      window.open("synccheck.html"+(u?"?sync="+encodeURIComponent(u):""),"_blank");
+    });
+  })();
   // ---------- PSG share link + QR (points a phone at psg.html with the sync link pre-filled) ----------
   function psgShareLink(){
     let u=""; try{ u=localStorage.getItem(SYNC_KEY)||syncUrl||""; }catch(e){ u=syncUrl||""; }
@@ -5983,7 +5994,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.2"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.3"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

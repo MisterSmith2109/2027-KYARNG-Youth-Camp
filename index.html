@@ -1097,6 +1097,14 @@
           <button class="btn2" id="medicCopyLink">Copy Medic link</button>
         </div>
       </div>
+      <div class="psg-share">
+        <div class="psg-qr" id="cmdQr"></div>
+        <div class="psg-share-info">
+          <div class="psg-share-h">Hand this to the command team</div>
+          <div class="panel-sub" id="cmdLinkNote" style="margin:4px 0 8px">Opens the <b>Command Team view</b> (<b>command.html</b>) &mdash; a read-only live picture of the whole camp: accountability by platoon, heat, supply, RFIs, medic dispatch status, equipment, incidents. No more &ldquo;Lifeline&rdquo; pseudo-platoon on the PSG page.</div>
+          <button class="btn2" id="cmdCopyLink">Copy Command link</button>
+        </div>
+      </div>
       <div class="psg-docs-wrap">
         <div class="psg-share-h">Field documents</div>
         <div class="panel-sub" style="margin:4px 0 8px">Links shown on the PSG <b>Documents</b> button. Host each file somewhere access-controlled (e.g. Google Drive, &ldquo;anyone with the link&rdquo;) and paste its share link here. These links <b>sync privately over the sync link</b> &mdash; they are not stored in this app&rsquo;s public files, so keep sensitive docs (maps, plans) here rather than in the repo.</div>
@@ -3878,6 +3886,7 @@ var qrcode = function() {
   }
   function renderPsgShare(){
     renderMedicShare(); // keep the medic share block in lockstep, in every branch
+    renderCmdShare();   // and the command-team link
     renderDcShare();    // and the D&C judge-link share
     const box=$("psgQr"), note=$("psgLinkNote"), btn=$("psgCopyLink"); if(!box) return;
     const link=psgShareLink();
@@ -3941,6 +3950,25 @@ var qrcode = function() {
       return;
     }
     if(note) note.innerHTML="Opens the <b>judge scoring page</b> with the sync link filled in. It shows only the scoring form — none of the board.";
+    if(btn) btn.disabled=false;
+    try{ const qr=qrcode(0,"L"); qr.addData(link); qr.make(); box.innerHTML=qr.createSvgTag(4,2); }
+    catch(e){ box.innerHTML=""; }
+  }
+  function cmdShareLink(){
+    let u=""; try{ u=localStorage.getItem(SYNC_KEY)||syncUrl||""; }catch(e){ u=syncUrl||""; }
+    if(!u) return "";
+    try{ return new URL("command.html", location.href).href+"?sync="+encodeURIComponent(u); }catch(e){ return ""; }
+  }
+  function renderCmdShare(){
+    const box=$("cmdQr"), note=$("cmdLinkNote"), btn=$("cmdCopyLink"); if(!box) return;
+    const link=cmdShareLink();
+    if(!link){
+      box.innerHTML="";
+      if(note) note.textContent="Connect Live Sync (below) first — then a scannable code and link for the command team appear here.";
+      if(btn) btn.disabled=true;
+      return;
+    }
+    if(note) note.innerHTML="Opens the <b>Command Team view</b> — a read-only live picture of the whole camp: accountability by platoon, heat, supply, RFIs, medic dispatch status, equipment, incidents.";
     if(btn) btn.disabled=false;
     try{ const qr=qrcode(0,"L"); qr.addData(link); qr.make(); box.innerHTML=qr.createSvgTag(4,2); }
     catch(e){ box.innerHTML=""; }
@@ -4945,6 +4973,12 @@ var qrcode = function() {
     const done=()=>{ const b=$("medicCopyLink"), t=b.textContent; b.textContent="Copied ✓"; setTimeout(()=>{ b.textContent=t; },1500); };
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(()=>{ window.prompt("Copy this Medic link:",link); }); }
     else window.prompt("Copy this Medic link:",link);
+  });
+  $("cmdCopyLink").addEventListener("click",()=>{
+    const link=cmdShareLink(); if(!link) return;
+    const done=()=>{ const b=$("cmdCopyLink"), t=b.textContent; b.textContent="Copied ✓"; setTimeout(()=>{ b.textContent=t; },1500); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done).catch(()=>{ window.prompt("Copy this Command link:",link); }); }
+    else window.prompt("Copy this Command link:",link);
   });
   $("dcCopyLink").addEventListener("click",()=>{
     const link=dcShareLink(); if(!link) return;
@@ -6096,7 +6130,7 @@ var qrcode = function() {
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.3"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

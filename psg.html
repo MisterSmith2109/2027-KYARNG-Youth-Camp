@@ -52,11 +52,6 @@
   .ea-meta{font-family:var(--mono);font-size:13px;font-weight:700;opacity:.85;margin-top:2px}
   .ea-x{background:rgba(18,20,14,.18);border:none;color:#12140e;font-size:22px;line-height:1;width:34px;height:34px;border-radius:8px;flex:none}
 
-  /* platoon schedule picker (Lifeline/HQ only) */
-  .pltpick{padding:12px 14px}
-  .pp-chips{display:flex;gap:7px;overflow-x:auto;padding:8px 2px 2px;-webkit-overflow-scrolling:touch}
-  .pp-chip{flex:none;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-weight:700;font-size:14px;padding:8px 13px;border-radius:20px;min-height:40px;white-space:nowrap}
-  .pp-chip.on{background:var(--olive);color:#12140e;border-color:var(--olive-bright)}
   .now-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
   .now-hd .k .vp{color:var(--olive-bright)}
   .now-act{font-size:26px;font-weight:800;line-height:1.15;margin:6px 0 3px;text-wrap:balance}
@@ -299,10 +294,6 @@
 
   <div class="card announce hide" id="annCard"><span class="ann-i">NOTICE</span><span id="annText"></span></div>
 
-  <div class="card pltpick hide" id="pltPick">
-    <div class="k">Platoon schedule</div>
-    <div class="pp-chips" id="pltChips"></div>
-  </div>
 
   <div class="card">
     <div class="now-hd"><span class="k" id="nowHd">Right now</span><span class="pill now" id="nowPill">NOW</span></div>
@@ -599,8 +590,8 @@
   var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
   var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
   var PLATOONS=["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel"];
-  // The Lifeline (HQ) dashboard can browse every platoon's schedule; regular platoons see only their own.
-  var HQ_NAMES=["lifeline","hq"]; // platoon names that unlock the platoon schedule picker
+  // (The old "Lifeline"/HQ pseudo-platoon is gone — the command team has its own read-only
+  //  page, command.html, so this page is purely for real platoons.)
   // Roster "group" values a renamed platoon should also match (lowercase). When a platoon renames
   // itself but campers are still grouped under the old letter on the TOC roster, map new -> old here.
   var PLATOON_ALIASES={ "g-flex":["golf"], "pink power ranger":["pink power rangers"] };
@@ -645,9 +636,7 @@
   function to12(min){ var h=Math.floor(min/60)%24, mi=min%60; var ap=h<12?"a":"p"; var h12=h%12||12; return h12+":"+pad(mi)+ap; }
 
   var state={ board:null, rev:-1, url:"", platoon:"", online:false, lastPullAt:0 };
-  var viewPlatoon=""; // Lifeline(HQ) only: which platoon's schedule is being viewed ("" = own)
-  function isHQView(){ return HQ_NAMES.indexOf(String(state.platoon||"").trim().toLowerCase())>=0; }
-  function schedPlatoon(){ return (isHQView() && viewPlatoon) ? viewPlatoon : state.platoon; } // whose schedule to show
+  function schedPlatoon(){ return state.platoon; } // whose schedule to show (always our own platoon)
 
   // Keep the last board we saw so the page still works with no signal (schedule, heat, and
   // queuing reports/requests all need a board to build from).
@@ -811,33 +800,14 @@
   }
 
   // ---------- render ----------
-  // Lifeline(HQ) platoon picker: chips to browse any platoon's schedule. Hidden for regular platoons.
-  function renderPltPicker(){
-    var card=$("pltPick"), box=$("pltChips"); if(!card||!box) return;
-    if(!isHQView() || !state.board || !state.board.platoons || !state.board.platoons.length){ card.classList.add("hide"); return; }
-    card.classList.remove("hide");
-    var cur=schedPlatoon();
-    box.innerHTML="";
-    state.board.platoons.forEach(function(p){
-      if(!p||!p.name) return;
-      var chip=document.createElement("button");
-      chip.className="pp-chip"+(p.name===cur?" on":"");
-      chip.textContent=p.name;
-      chip.addEventListener("click",function(){ viewPlatoon=(p.name===state.platoon)?"":p.name; render(); });
-      box.appendChild(chip);
-    });
-  }
   function render(){
     var b=state.board;
     $("hPlt").textContent=state.platoon||"—";
     if(b&&b.campName) $("hCamp").textContent=String(b.campName).toUpperCase();
     setStatus();
-    renderPltPicker();
-    // when browsing another platoon (Lifeline/HQ), label the schedule cards with whose it is
-    var viewing=(isHQView() && schedPlatoon()!==state.platoon) ? schedPlatoon() : "";
-    $("nowHd").innerHTML="Right now"+(viewing?' <span class="vp">· '+esc(viewing)+"</span>":"");
-    if($("nextHd")) $("nextHd").innerHTML="Next up"+(viewing?' <span class="vp">· '+esc(viewing)+"</span>":"");
-    var rt=$("restToday"); if(rt) rt.textContent="Rest of today"+(viewing?" · "+viewing:"");
+    $("nowHd").innerHTML="Right now";
+    if($("nextHd")) $("nextHd").innerHTML="Next up";
+    var rt=$("restToday"); if(rt) rt.textContent="Rest of today";
 
     // announcement
     var msg=b&&b.psgMsg?String(b.psgMsg).trim():"";
@@ -1467,31 +1437,21 @@
 
   // ---------- platoon roster (built from the TOC sign-in roster) ----------
   // A person's platoon comes from their roster "Group" (matched to a platoon, aliases included).
-  // Only EXPLICIT Staff/Support roles are routed to Lifeline (HQ); everyone else (including campers
-  // with a missing/odd role) is placed by their group, and anyone whose group matches no platoon
-  // also rolls up to Lifeline. This keeps platoon rosters correct even when roles aren't set.
+  // Staff/Support and anyone whose group matches no platoon are NOT shown here — the command
+  // team sees them in the Staff & Support bucket on command.html instead.
   var ROLE_ORDER={psg:0,apsg:1,camper:2,staff:3,support:4};
   function isStaffRole(role){ role=String(role||"").trim().toLowerCase(); return role==="staff"||role==="support"; }
   function roleRank(role){ var k=String(role||"").trim().toLowerCase(); return (k in ROLE_ORDER)?ROLE_ORDER[k]:2; }
   function rosterStatus(s){ s=String(s||"").trim().toLowerCase(); if(s==="in") return ["in","IN"]; if(s==="off-site"||s==="offsite") return ["offsite","OFF"]; if(s==="pending") return ["pending","PEND"]; if(s==="departed") return ["departed","DONE"]; if(s==="absent") return ["absent","ABS"]; return ["out","OUT"]; }
-  function allPlatoonGroupNames(){ // every group value that maps to some platoon on the board
-    var s={}; ((state.board&&state.board.platoons)||[]).forEach(function(p){ if(p&&p.name) platoonMatchNames(p.name).forEach(function(n){ s[n]=1; }); }); return s;
-  }
-  function belongsHere(r, myPlt, iAmHQ, allNames){
-    var g=String(r.group||"").trim().toLowerCase(), staff=isStaffRole(r.role);
-    if(iAmHQ){
-      if(staff) return true;                                  // explicit Staff/Support
-      if(HQ_NAMES.indexOf(g)>=0) return true;                 // grouped to Lifeline/HQ by name
-      if(platoonMatchNames(myPlt).indexOf(g)>=0) return true; // Lifeline platoon's own name/aliases
-      return !allNames[g];                                    // group matches no platoon -> staff/unassigned
-    }
-    if(staff) return false;                                   // staff never fill a camper platoon
+  function belongsHere(r, myPlt){
+    var g=String(r.group||"").trim().toLowerCase();
+    if(isStaffRole(r.role)) return false;                     // staff never fill a camper platoon
     return platoonMatchNames(myPlt).indexOf(g)>=0;            // match by group (renamed-platoon aliases included)
   }
   function renderPltRoster(){
     var list=$("rosList"), sub=$("rosSub"); if(!list) return;
-    var b=state.board, plt=state.platoon, iAmHQ=isHQView(), allNames=allPlatoonGroupNames();
-    var people=(b&&Array.isArray(b.roster)) ? b.roster.filter(function(r){ return r&&r.name&&belongsHere(r,plt,iAmHQ,allNames); }) : [];
+    var b=state.board, plt=state.platoon;
+    var people=(b&&Array.isArray(b.roster)) ? b.roster.filter(function(r){ return r&&r.name&&belongsHere(r,plt); }) : [];
     people.sort(function(a,c){ var ra=roleRank(a.role), rc=roleRank(c.role); if(ra!==rc) return ra-rc; return String(a.name||"").localeCompare(String(c.name||"")); });
     var total=people.length,
         inN=people.filter(function(r){ return String(r.status).toLowerCase()==="in"; }).length,
@@ -1515,9 +1475,9 @@
   // ---------- take accountability: the PSG counts their platoon and updates the shared roster ----------
   var acctState={}; // id -> pending status the PSG set in the sheet (before submit)
   function acctPeople(){
-    var b=state.board, plt=state.platoon, iAmHQ=isHQView(), allNames=allPlatoonGroupNames();
+    var b=state.board, plt=state.platoon;
     var people=(b&&Array.isArray(b.roster)) ? b.roster.filter(function(r){
-      return r&&r.name&&belongsHere(r,plt,iAmHQ,allNames)&&String(r.status).toLowerCase()!=="departed"; }) : [];
+      return r&&r.name&&belongsHere(r,plt)&&String(r.status).toLowerCase()!=="departed"; }) : [];
     people.sort(function(a,c){ var ra=roleRank(a.role), rc=roleRank(c.role); if(ra!==rc) return ra-rc; return String(a.name||"").localeCompare(String(c.name||"")); });
     return people;
   }
@@ -1604,7 +1564,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.3"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;

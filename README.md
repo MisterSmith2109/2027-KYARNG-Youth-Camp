@@ -41,6 +41,22 @@ Also new for 2027:
 - **Deletes stick for the whole camp** — deletion tombstones now live 14 days
   (was 24 hours), so a phone that slept through a roster delete can no longer
   resurrect the record when it reconnects later in the week.
+- **Command Team view (`command.html`)** — a read-only phone/tablet page for
+  the command team and staff, replacing the old "Lifeline" pseudo-platoon on
+  the PSG page. One screen shows the whole camp live: **accountability by
+  platoon** (with a separate **Staff & Support** bucket — explicit Staff/Support
+  roles plus anyone whose group matches no platoon), glance tiles
+  (accountability %, open supply, open RFIs, active medic dispatches), the
+  **heat flag**, every platoon's **Now / Next** activity, the full **supply
+  request** inbox (urgent highlighted), **RFIs with TOC answers**, medic
+  dispatch status (operational only — no medical detail), **GSAs and
+  sensitive-item status**, recent incidents and heat casualties, the TOC
+  announcement with a **Call TOC** button, and a copyable **Camp AAR** rollup.
+  Same freshness contract as the other field pages (LIVE / STALE / OFFLINE).
+  Share it from the TOC's **Field / PSG Broadcast** panel — "Copy Command
+  link" + QR — or open `command.html?sync=<exec url>`.
+  The PSG page is now purely for real platoons: the Lifeline/HQ platoon
+  picker and staff roll-up are gone.
 - **Sync comms check (`synccheck.html`)** — a one-tap pre-camp test of the
   deployed sync backend, run from any device: reachability, a write read back,
   two simultaneous writers (both must survive the merge), delete durability
@@ -184,13 +200,10 @@ from a phone, not just a laptop or wall display.
   rather than in `docs/`),
   a **Platoon Roster**
   button (their platoon's people and live sign-in status, built from the TOC
-  sign-in roster — a person's platoon comes from their roster *Group*, and anyone
-  whose role is explicitly **Staff/Support** (or whose group matches no platoon)
-  rolls up to **Lifeline**), and three quick things
-  the phone can send straight to the TOC board. The **Lifeline (HQ)** phone additionally gets a
-  **platoon picker** — tap any platoon to browse its Now / Next and rest-of-day
-  schedule (their own pre-event alerts still follow Lifeline); regular platoons
-  just see their own.
+  sign-in roster — a person's platoon comes from their roster *Group*;
+  Staff/Support and anyone whose group matches no platoon appear on the
+  **Command Team view** instead), and three quick things
+  the phone can send straight to the TOC board.
   - **Supply Request** (item, quantity, priority) → lands in the TOC's Supply
     Requests panel.
   - **RFI / Suggestion** → ask the TOC a question (RFI) or send a suggestion; it

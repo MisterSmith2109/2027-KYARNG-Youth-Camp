@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12140e">
+<title>Command Team — KYARNG Youth Camp</title>
+<style>
+  :root{
+    --bg:#101208; --panel:#1b1e16; --panel-2:#242a1c; --line:#454b38; --line-soft:#2f3426;
+    --ink:#f1f2e2; --muted:#a9b08d; --olive:#9aab52; --olive-bright:#c6dc6e;
+    --amber:#f5b62c; --green:#5fd257; --red:#f4553b; --steel:#57bde0; --black-status:#8b917a;
+    --mono:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.4;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:640px;margin:0 auto;padding:12px 12px 40px}
+  button,input,select{font-family:inherit;font-size:16px} button{cursor:pointer}
+  .mono{font-family:var(--mono)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 12px;border-bottom:2px solid var(--steel)}
+  .h-name{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8d4e6}
+  .h-role{font-weight:800;font-size:20px;line-height:1.1}
+  .h-right{text-align:right}
+  .h-time{font-family:var(--mono);font-size:15px;font-weight:700}
+  .h-stat{font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:2px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--black-status);flex:none}
+  .dot.on{background:var(--green)} .dot.warn{background:var(--amber)} .dot.off{background:var(--red)}
+
+  /* freshness banner — shown whenever the data on screen can't be proven current */
+  .freshbar{position:sticky;top:0;z-index:60;display:flex;gap:8px;align-items:center;margin-top:10px;
+    padding:9px 13px;border-radius:10px;font-size:13px;font-weight:600;background:var(--amber);color:#241a05}
+  .freshbar.off{background:var(--red);color:#2a0d08}
+  .freshbar b{font-family:var(--mono);font-size:11px;letter-spacing:.12em;white-space:nowrap}
+  body.data-old .card:not(.freshbar){opacity:.72}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-top:12px}
+  .k{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .muted{color:var(--muted)} .hide{display:none!important}
+  .sec-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+  .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;padding:6px}
+
+  /* glance tiles */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+  .tile .t-k{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .tile .t-val{font-family:var(--mono);font-size:26px;font-weight:800;line-height:1.15;margin-top:2px}
+  .tile .t-sub{font-size:12px;color:var(--muted)}
+  .tile.alert{border-color:var(--red)} .tile.alert .t-val{color:var(--red)}
+  .tile.good .t-val{color:var(--green)}
+  .tile.warn2 .t-val{color:var(--amber)}
+
+  /* accountability rows */
+  .acct-row{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line-soft)}
+  .acct-row:first-child{border-top:none}
+  .acct-name{font-weight:700;min-width:86px}
+  .acct-n{font-family:var(--mono);font-weight:800}
+  .acct-n.ok{color:var(--green)} .acct-n.short{color:var(--amber)}
+  .acct-out{font-size:12.5px;color:var(--muted);flex:1;min-width:0}
+  .acct-staff{border-top:2px solid var(--line);margin-top:4px;padding-top:10px}
+  .acct-tag{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--steel);border:1px solid var(--steel);
+    border-radius:4px;padding:1px 5px;vertical-align:middle}
+
+  /* heat */
+  .heat{border:none;padding:0;overflow:hidden}
+  .heat-top{padding:14px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .heat-cat{font-family:var(--mono);font-weight:800;font-size:20px;letter-spacing:.04em}
+  .heat-flagword{font-family:var(--mono);font-size:12px;font-weight:700;opacity:.85}
+  .heat-wbgt{font-family:var(--mono);font-weight:800;font-size:30px;line-height:1;text-align:right}
+  .heat-wbgt small{font-size:12px;font-weight:600;opacity:.8}
+  .heat-body{background:var(--panel);padding:12px 15px;font-size:14px}
+  .heat-NA{background:var(--panel-2);color:var(--muted)} .heat-LOW{background:var(--panel-2);color:var(--olive-bright)}
+  .heat-GREEN{background:var(--green);color:#0f1a0e} .heat-YELLOW{background:var(--amber);color:#241a05}
+  .heat-RED{background:var(--red);color:#2a0d08} .heat-BLACK{background:#15160f;color:#e9ead9;border-bottom:1px solid var(--line)}
+
+  /* now/next grid */
+  .nn-row{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line-soft);align-items:baseline}
+  .nn-row:first-child{border-top:none}
+  .nn-p{font-weight:700;min-width:86px}
+  .nn-main{flex:1;min-width:0;font-size:14px}
+  .nn-now{font-weight:600}
+  .nn-loc{color:var(--olive-bright)}
+  .nn-next{font-size:12.5px;color:var(--muted)}
+
+  /* list rows (supply / rfi / medic / gsa / incidents) */
+  .li{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-top:9px;background:var(--panel-2)}
+  .li.urgent{border-color:var(--red);background:#241210}
+  .li.priority{border-color:var(--amber)}
+  .li-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:5px}
+  .ch-urgent{background:var(--red);color:#2a0d08} .ch-priority{background:var(--amber);color:#241a05}
+  .ch-routine{background:var(--panel);color:var(--olive-bright);border:1px solid var(--line)}
+  .ch-open{background:var(--panel);color:var(--amber);border:1px solid var(--line)}
+  .ch-filled,.ch-answered,.ch-closed,.ch-resolved{background:#10231a;color:#9fdc9f;border:1px solid var(--green)}
+  .ch-new{background:var(--red);color:#2a0d08}
+  .ch-acknowledged,.ch-enroute{background:var(--panel);color:var(--olive-bright);border:1px solid var(--line)}
+  .li-main{font-weight:700;font-size:15px}
+  .li-sub{font-size:13px;color:var(--muted);margin-top:2px;white-space:pre-wrap;word-wrap:break-word}
+  .li-ans{font-size:13.5px;margin-top:5px;padding:7px 9px;border-left:3px solid var(--steel);background:var(--panel)}
+  .li-t{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+  .empty{padding:12px 4px;text-align:center;color:var(--muted)}
+
+  /* announcement / call */
+  .ann{font-size:15px;white-space:pre-wrap;word-wrap:break-word}
+  .callrow{display:flex;gap:10px;margin-top:10px}
+  .callbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--ink);font-weight:700;text-decoration:none}
+
+  .aar-out{font-family:var(--mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:10px;max-height:56vh;overflow:auto;color:var(--ink)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#0f1a0e;font-weight:700;
+    padding:11px 18px;border-radius:10px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+  .toast.show{opacity:1} .toast.err{background:var(--red);color:#2a0d08}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,11,8,.94);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:460px;width:100%;max-height:92vh;overflow-y:auto}
+  .sheet h1{font-size:19px;margin:0 0 4px} .sheet p{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .field input{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);min-height:44px}
+  .primary{width:100%;min-height:48px;border-radius:10px;border:1px solid var(--olive-bright);background:var(--olive);color:#12140e;font-weight:800;font-size:16px;margin-top:4px}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .foot button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 11px;min-height:40px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+  /* ================= NEO THEME (opt-in via the footer toggle) ================= */
+  html[data-theme="neo"]{
+    --bg:#060910; --panel:rgba(15,24,41,.86); --panel-2:rgba(122,208,238,.14);
+    --line:rgba(126,216,244,.38); --line-soft:rgba(126,216,244,.18);
+    --ink:#f2fbff; --muted:#b3d4e8; --olive:#25d8ee; --olive-bright:#6cf1ff;
+    --amber:#ffd23a; --green:#2bf5a4; --red:#ff5470; --steel:#5ad2ff; --black-status:#6a7d8c;
+  }
+  html[data-theme="neo"] body{ background:#060910; }
+  html[data-theme="neo"] body::before{ content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(900px 620px at 8% -8%, rgba(40,190,215,.16), transparent 60%),
+      radial-gradient(760px 620px at 112% 6%, rgba(57,239,171,.10), transparent 55%),
+      radial-gradient(700px 760px at 50% 120%, rgba(70,120,255,.10), transparent 60%),
+      linear-gradient(180deg,#070d17,#04070d); }
+  html[data-theme="neo"] .card,html[data-theme="neo"] .tile{ -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);border-radius:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 30px -20px rgba(0,0,0,.95); }
+  html[data-theme="neo"] header{ border-bottom-color:var(--steel); }
+  html[data-theme="neo"] .h-name{ text-shadow:0 0 14px rgba(90,210,255,.5) }
+  html[data-theme="neo"] input{ background:rgba(7,12,22,.86);border-color:var(--line-soft);color:var(--ink) }
+</style>
+<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite">
+  <header>
+    <div>
+      <div class="h-name" id="hCamp">KYARNG YOUTH CAMP</div>
+      <div class="h-role">Command Team</div>
+    </div>
+    <div class="h-right">
+      <div class="h-time mono" id="hTime">--:--</div>
+      <div class="h-stat"><span class="dot" id="hDot"></span><span id="hStat">connecting…</span></div>
+    </div>
+  </header>
+
+  <div class="card freshbar hide" id="freshBar"><b id="freshBarK">DATA MAY BE OLD</b><span id="freshBarTxt"></span></div>
+
+  <div class="tiles">
+    <div class="tile" id="tileAcct"><div class="t-k">Accountability</div><div class="t-val" id="acctVal">—</div><div class="t-sub" id="acctSub">connect to see the board</div></div>
+    <div class="tile" id="tileSupply"><div class="t-k">Open supply</div><div class="t-val" id="supVal">—</div><div class="t-sub" id="supSub"></div></div>
+    <div class="tile" id="tileRfi"><div class="t-k">Open RFIs</div><div class="t-val" id="rfiVal">—</div><div class="t-sub" id="rfiSub"></div></div>
+    <div class="tile" id="tileMedic"><div class="t-k">Medic dispatches</div><div class="t-val" id="medVal">—</div><div class="t-sub" id="medSub"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Accountability by platoon</span><span class="k" id="acctTotal"></span></div>
+    <div id="acctList"><div class="empty">Connect to see the board.</div></div>
+  </div>
+
+  <div class="card heat">
+    <div class="heat-top heat-NA" id="heatTop">
+      <div><div class="heat-cat" id="heatCat">— set at TOC —</div><div class="heat-flagword" id="heatFlag"></div></div>
+      <div class="heat-wbgt"><span id="heatWbgt">--</span><small>°F WBGT</small></div>
+    </div>
+    <div class="heat-body" id="heatGuide">—</div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Platoons now / next</span><span class="k mono" id="nnDay"></span></div>
+    <div id="nnList"><div class="empty">Connect to see schedules.</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Supply requests</span><button class="linkbtn" id="supToggle">show filled</button></div>
+    <div id="supList"><div class="empty">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">RFIs &amp; suggestions</span><button class="linkbtn" id="rfiToggle">show closed</button></div>
+    <div id="rfiList"><div class="empty">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Active medic dispatches</span><span class="k muted">operational only — no medical detail</span></div>
+    <div id="medList"><div class="empty">—</div></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k" id="gsaK">GSAs</span><span class="k" id="gsaCount"></span></div>
+    <div id="gsaList"><div class="empty">—</div></div>
+    <div class="li-sub" id="siLine" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Incidents &amp; heat casualties</span><span class="k" id="incCount"></span></div>
+    <div id="incList"><div class="empty">—</div></div>
+  </div>
+
+  <div class="card" id="annCard">
+    <div class="sec-hd"><span class="k">TOC announcement</span></div>
+    <div class="ann muted" id="annTxt">—</div>
+    <div class="callrow">
+      <a class="callbtn hide" id="btnCallToc" href="#">📞 Call TOC</a>
+      <button class="callbtn" id="btnCampAar">📋 Camp AAR</button>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span id="updated">—</span>
+    <span style="display:flex;gap:8px">
+      <button id="btnSettings">⚙ Settings</button>
+      <button id="btnTheme" title="Switch between the Field look and the futuristic Neo look">◐ Neo</button>
+    </span>
+  </div>
+</div>
+
+<!-- setup -->
+<div class="overlay hide" id="setup">
+  <div class="sheet">
+    <h1 id="setupTitle">Command Team view</h1>
+    <p>Paste the camp sync link (from the TOC). This page is <b>read-only</b> — a live
+    staff/supply picture of the whole camp: accountability by platoon, heat, supply
+    requests, RFIs, medic dispatch status, equipment, and incidents.</p>
+    <div class="field"><label>Camp sync link</label>
+      <input id="setUrl" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url" autocapitalize="off" autocorrect="off"></div>
+    <button class="primary" id="setSave">Save &amp; connect</button>
+    <div style="text-align:center"><button class="linkbtn" id="setCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- camp AAR -->
+<div class="overlay hide" id="campAar">
+  <div class="sheet">
+    <h1>Camp AAR</h1>
+    <p>An overall camp rollup from the shared board &mdash; personnel, heat, incidents, logistics. Read-only; the day-by-day arc and command narrative live on the TOC.</p>
+    <div class="aar-out" id="campAarOut">—</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="primary" id="campAarCopy" style="margin-top:0">Copy</button><button class="primary" id="campAarDl" style="margin-top:0;background:var(--panel-2);color:var(--ink);border-color:var(--line)">Download</button></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" id="campAarClose">Done</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  // ---------- theme toggle ----------
+  (function(){ var KEY="kyarng-camp-theme", root=document.documentElement;
+    var lbl=function(){ var b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field":"◐ Neo"; };
+    lbl();
+    var b=$("btnTheme"); if(b) b.addEventListener("click",function(){ var neo=root.getAttribute("data-theme")==="neo";
+      if(neo) root.removeAttribute("data-theme"); else root.setAttribute("data-theme","neo");
+      try{ localStorage.setItem(KEY, neo?"field":"neo"); }catch(e){} lbl(); });
+  })();
+  var LS_URL="kyarng-cmd-url", LS_BOARD="kyarng-cmd-board";
+  var CAMP_TZ="America/Chicago";
+  var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
+  var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
+  var PLATOONS=["Alpha","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel"];
+  // Keep in step with psg.html: platoons renamed mid-camp keep matching their old roster Group.
+  var PLATOON_ALIASES={ "g-flex":["golf"], "pink power ranger":["pink power rangers"] };
+  function platoonMatchNames(plt){
+    var k=String(plt||"").trim().toLowerCase(), out=[k];
+    if(PLATOON_ALIASES[k]) PLATOON_ALIASES[k].forEach(function(x){ out.push(String(x).trim().toLowerCase()); });
+    return out;
+  }
+
+  var HEATCATS={
+    NA:{cls:"heat-NA",name:"— set WBGT —",flag:"",g:"The TOC hasn't set a WBGT reading yet."},
+    BELOW:{cls:"heat-LOW",name:"BELOW CAT 1",flag:"Low risk",g:"Low heat risk. Keep water available."},
+    C1:{cls:"heat-GREEN",name:"CATEGORY 1",flag:"Green flag",g:"Use discretion for intense/prolonged exertion. Water ~every 45 min."},
+    C2:{cls:"heat-YELLOW",name:"CATEGORY 2",flag:"Yellow flag",g:"Limit strenuous activity; shade rest between bouts. Water ~every 30 min."},
+    C3:{cls:"heat-RED",name:"CATEGORY 3",flag:"Red flag",g:"Curtail strenuous activity; mandatory shade rest. Water ~every 20–30 min. Watch for heat illness."},
+    C4:{cls:"heat-BLACK",name:"CATEGORY 4",flag:"Black flag",g:"Suspend strenuous outdoor activity. Continuous hydration; active heat-illness watch."},
+    C5:{cls:"heat-BLACK",name:"CATEGORY 5",flag:"Black flag",g:"Suspend all outdoor activity. Active heat-illness watch."}
+  };
+  function heatCat(wb){ wb=(wb==null||wb==="")?null:+wb; if(wb==null||isNaN(wb)) return HEATCATS.NA;
+    if(wb>=90)return HEATCATS.C5; if(wb>=88)return HEATCATS.C4; if(wb>=85)return HEATCATS.C3;
+    if(wb>=82)return HEATCATS.C2; if(wb>=78)return HEATCATS.C1; return HEATCATS.BELOW; }
+
+  function pad(n){ n=+n; return (n<10?"0":"")+n; }
+  function campNow(){ var p={};
+    try{ new Intl.DateTimeFormat("en-US",{timeZone:CAMP_TZ,hour12:false,weekday:"short",hour:"2-digit",minute:"2-digit"})
+      .formatToParts(new Date()).forEach(function(x){ if(x.type!=="literal") p[x.type]=x.value; }); }
+    catch(e){ var d=new Date(); return {h:d.getHours(),m:d.getMinutes(),dayIdx:(d.getDay()+1)%7}; }
+    return {h:parseInt(p.hour,10)%24, m:parseInt(p.minute,10), dayIdx:WEEKDAY_IDX[p.weekday]}; }
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function nowMin(){ var c=campNow(); return c.h*60+c.m; }
+  function hm(s){ s=String(s); if(s.length===3) s="0"+s; if(s.length!==4) return null;
+    var h=+s.slice(0,2), mi=+s.slice(2,4); if(isNaN(h)||isNaN(mi)||h>23||mi>59) return null; return h*60+mi; }
+  function parseRange(t){ t=String(t||"").trim();
+    var m=t.match(/^(\d{3,4})\s*[-–]\s*(\d{3,4})$/);
+    if(m){ var s=hm(m[1]), e=hm(m[2]); if(s==null||e==null) return null; var end=e; if(end<s) end+=1440; return {start:s,end:end}; }
+    m=t.match(/^(\d{3,4})$/); if(m){ var s2=hm(m[1]); if(s2==null) return null; return {start:s2,end:null}; }
+    return null;
+  }
+  function to12(min){ var h=Math.floor(min/60)%24, mi=min%60; var ap=h<12?"a":"p"; var h12=h%12||12; return h12+":"+pad(mi)+ap; }
+  function fmtHm(t){ t=String(t||""); return /^\d{4}$/.test(t)?(t.slice(0,2)+":"+t.slice(2,4)):t; }
+
+  var state={ board:null, rev:-1, url:"", online:false, lastPullAt:0 };
+  var showFilled=false, showClosed=false;
+
+  function saveBoardCache(){ try{ if(state.board) localStorage.setItem(LS_BOARD, JSON.stringify({rev:state.rev,at:state.lastPullAt,board:state.board})); }catch(e){} }
+  function restoreBoardCache(){ try{ var o=JSON.parse(localStorage.getItem(LS_BOARD)||"null"); if(o&&o.board){ state.board=o.board; state.rev=+(o.rev||0); state.lastPullAt=+(o.at||0); } }catch(e){} }
+
+  var toastTimer=null;
+  function toast(msg,err){ var t=$("toast"); if(!t) return; t.textContent=msg; t.className="toast show"+(err?" err":""); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.className="toast"+(err?" err":""); },2800); }
+
+  // ---------- sync (READ-ONLY: this page never posts anything) ----------
+  var pollTimer=null;
+  function connect(){
+    state.url=""; try{ state.url=localStorage.getItem(LS_URL)||""; }catch(e){}
+    restoreBoardCache();
+    if(state.url){ render(); pull(); clearInterval(pollTimer); pollTimer=setInterval(pull,10000); }
+    else { openSetup(true); }
+  }
+  var lastPullTry=0;
+  function pull(){
+    if(!state.url) return;
+    lastPullTry=Date.now();
+    // Cache-bust every GET (unique query + no-store) so no browser, proxy, or webview can
+    // ever hand back a cached body — freshness is only ever claimed from a real response.
+    var u=state.url+(state.url.indexOf("?")>=0?"&":"?")+"fresh="+Date.now();
+    fetch(u,{method:"GET",cache:"no-store"}).then(function(r){return r.text();}).then(function(txt){
+      var env=null; try{ env=JSON.parse(txt); }catch(e){}
+      if(env&&env.board){
+        var rev=+(env._rev||0);
+        // Monotonic guard: never step back to an older board.
+        if(rev>=state.rev){ state.board=env.board; state.rev=rev; state.online=true; state.lastPullAt=Date.now(); saveBoardCache(); }
+      }
+      else { state.online=true; state.lastPullAt=Date.now(); }
+      render();
+    }).catch(function(){ state.online=false; setStatus(); });
+  }
+  // Freshness contract — identical to the other field pages: LIVE only while a pull
+  // has confirmed the board recently; STALE then OFFLINE otherwise, with the banner.
+  var FRESH_MS=22000, STALE_MS=90000;
+  function ageTxt(ms){
+    if(!isFinite(ms)) return "no data yet";
+    var s=Math.max(0,Math.round(ms/1000));
+    if(s<60) return s+"s ago"; var m=Math.round(s/60);
+    if(m<60) return m+"m ago"; return Math.round(m/6)/10+"h ago";
+  }
+  function dataAge(){ return state.lastPullAt?(Date.now()-state.lastPullAt):Infinity; }
+  function setStatus(){ var d=$("hDot"), s=$("hStat");
+    var age=dataAge();
+    var tier=(state.online && age<FRESH_MS)?"live":(age<STALE_MS?"stale":"off");
+    if(tier==="live"){ d.className="dot on"; s.textContent="LIVE · "+ageTxt(age); }
+    else if(tier==="stale"){ d.className="dot warn"; s.textContent="STALE · "+ageTxt(age); }
+    else { d.className="dot off"; s.textContent="OFFLINE · "+ageTxt(age); }
+    var bar=$("freshBar"), barK=$("freshBarK"), barTxt=$("freshBarTxt");
+    if(bar){
+      if(tier==="live" || !state.url){ bar.classList.add("hide"); document.body.classList.remove("data-old"); }
+      else if(tier==="stale"){ bar.classList.remove("hide"); bar.classList.remove("off");
+        barK.textContent="DATA MAY BE OLD"; barTxt.textContent="last updated "+ageTxt(age)+" — reconnecting…";
+        document.body.classList.remove("data-old"); }
+      else { bar.classList.remove("hide"); bar.classList.add("off");
+        barK.textContent="OFFLINE"; barTxt.textContent=(isFinite(age)?"showing data from "+ageTxt(age):"no board data yet")+" — will update when signal returns";
+        document.body.classList.add("data-old"); }
+    }
+  }
+  function freshWatchdog(){
+    setStatus();
+    if(!state.url) return;
+    if(dataAge()>15000 && Date.now()-lastPullTry>10000) pull();
+  }
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden){ pull(); } });
+  window.addEventListener("focus",function(){ pull(); });
+  window.addEventListener("online",function(){ pull(); });
+
+  // ---------- accountability by platoon ----------
+  // A person belongs to a platoon when their roster Group matches the platoon's name
+  // (or a known alias). EXPLICIT Staff/Support roles — and anyone whose group matches
+  // no platoon — roll up to the Staff & Support bucket. No "Lifeline" pseudo-platoon:
+  // the command team reads this page instead of pretending to be a platoon.
+  function platoonNames(){
+    var b=state.board;
+    if(b&&Array.isArray(b.platoons)&&b.platoons.length) return b.platoons.map(function(p){ return (p&&p.name)||""; }).filter(Boolean);
+    return PLATOONS.slice();
+  }
+  function acctBuckets(){
+    var roster=(state.board&&Array.isArray(state.board.roster))?state.board.roster:[];
+    var names=platoonNames();
+    var buckets=names.map(function(n){ return {name:n, keys:platoonMatchNames(n), people:[]}; });
+    var staff={name:"Staff & Support", people:[]};
+    roster.forEach(function(r){
+      if(!r||!r.name) return;
+      var role=String(r.role||"").toLowerCase();
+      if(role==="staff"||role==="support"){ staff.people.push(r); return; }
+      var g=String(r.group||"").trim().toLowerCase(), hit=null;
+      for(var i=0;i<buckets.length;i++){ if(buckets[i].keys.indexOf(g)>=0){ hit=buckets[i]; break; } }
+      (hit||staff).people.push(r);
+    });
+    return {platoons:buckets, staff:staff};
+  }
+  function acctCount(people){
+    var inn=0, out=[], excl=0;
+    people.forEach(function(r){ var s=r.status;
+      if(s==="Departed"||s==="Absent"){ excl++; return; }
+      if(s==="In"||s==="Off-site"||s==="Pending") inn++; else out.push(r); });
+    return {inn:inn, out:out, accountable:people.length-excl};
+  }
+  function renderAcct(){
+    var list=$("acctList"); if(!list) return;
+    var b=state.board;
+    if(!b||!Array.isArray(b.roster)||!b.roster.length){
+      list.innerHTML='<div class="empty">'+(b?"No one on the roster yet.":"Connect to see the board.")+'</div>';
+      $("acctTotal").textContent=""; $("acctVal").textContent="—"; $("acctSub").textContent=b?"no roster yet":"connect to see the board";
+      $("tileAcct").className="tile"; return;
+    }
+    var bk=acctBuckets(), totIn=0, totAcc=0;
+    list.innerHTML="";
+    function row(bucket, isStaff){
+      var c=acctCount(bucket.people);
+      if(!bucket.people.length && !isStaff) return; // skip empty platoons
+      totIn+=c.inn; totAcc+=c.accountable;
+      var div=document.createElement("div"); div.className="acct-row"+(isStaff?" acct-staff":"");
+      var ok=c.out.length===0;
+      div.innerHTML='<span class="acct-name">'+esc(bucket.name)+(isStaff?' <span class="acct-tag">STAFF</span>':'')+'</span>'+
+        '<span class="acct-n '+(ok?"ok":"short")+'">'+c.inn+"/"+c.accountable+'</span>'+
+        '<span class="acct-out">'+(ok?"all accounted":("out: "+c.out.map(function(r){ return esc(r.name)+(r.last?" ("+esc(r.last)+")":""); }).join(", ")))+'</span>';
+      list.appendChild(div);
+    }
+    bk.platoons.forEach(function(p){ row(p,false); });
+    if(bk.staff.people.length) row(bk.staff,true);
+    var pct=totAcc>0?Math.round(totIn/totAcc*100):null;
+    $("acctTotal").textContent=totIn+"/"+totAcc+(pct===null?"":" · "+pct+"%");
+    $("acctVal").textContent=(pct===null?"—":pct+"%");
+    $("acctSub").textContent=totIn+"/"+totAcc+" accounted for";
+    $("tileAcct").className="tile "+(pct===100?"good":(pct!=null&&pct<90?"alert":"warn2"));
+  }
+
+  // ---------- heat ----------
+  function renderHeat(){
+    var b=state.board, cat=heatCat(b?b.wbgt:null);
+    $("heatTop").className="heat-top "+cat.cls;
+    $("heatCat").textContent=cat.name; $("heatFlag").textContent=cat.flag;
+    $("heatWbgt").textContent=(b&&b.wbgt!=null&&b.wbgt!=="")?Math.round(+b.wbgt):"--";
+    $("heatGuide").textContent=cat.g;
+  }
+
+  // ---------- platoons now/next ----------
+  function rowsFor(plt){
+    if(!plt||!plt.sched) return [];
+    var day=CAMP_DAYS[campNow().dayIdx]||CAMP_DAYS[0];
+    var rows=(plt.sched[day]||[]).map(function(r){ return {time:r.time,activity:r.activity,loc:r.loc,canceled:!!r.canceled,rng:parseRange(r.time)}; })
+      .filter(function(r){ return r.rng; });
+    rows.sort(function(a,b){ return a.rng.start-b.rng.start; });
+    for(var j=0;j<rows.length;j++){
+      var end=rows[j].rng.end;
+      if(end==null){ end=(j+1<rows.length)? rows[j+1].rng.start : rows[j].rng.start+60; }
+      rows[j].end=end;
+    }
+    return rows;
+  }
+  function nowNext(rows){
+    var now=nowMin(), cur=null, next=null;
+    for(var i=0;i<rows.length;i++){ var r=rows[i]; if(r.canceled) continue;
+      if(r.rng.start<=now && now<r.end){ cur=r; } }
+    for(var k=0;k<rows.length;k++){ var r2=rows[k]; if(r2.canceled) continue;
+      if(r2.rng.start>now){ next=r2; break; } }
+    if(!cur){ for(var m=rows.length-1;m>=0;m--){ if(!rows[m].canceled && rows[m].rng.start<=now){ cur=rows[m]; break; } } }
+    return {cur:cur,next:next};
+  }
+  function renderNowNext(){
+    var list=$("nnList"); if(!list) return;
+    var b=state.board;
+    $("nnDay").textContent=CAMP_DAYS[campNow().dayIdx]||"";
+    if(!b||!Array.isArray(b.platoons)||!b.platoons.length){ list.innerHTML='<div class="empty">Connect to see schedules.</div>'; return; }
+    list.innerHTML="";
+    b.platoons.forEach(function(p){
+      if(!p||!p.name) return;
+      var nn=nowNext(rowsFor(p));
+      var div=document.createElement("div"); div.className="nn-row";
+      var cur=nn.cur?('<span class="nn-now">'+esc(nn.cur.activity||"—")+'</span>'+(nn.cur.loc?' <span class="nn-loc">· '+esc(nn.cur.loc)+'</span>':'')):'<span class="muted">no current event</span>';
+      var nx=nn.next?('next '+to12(nn.next.rng.start)+' — '+esc(nn.next.activity||"")+(nn.next.loc?' · '+esc(nn.next.loc):'')):'';
+      div.innerHTML='<span class="nn-p">'+esc(p.name)+'</span><span class="nn-main">'+cur+(nx?'<div class="nn-next">'+nx+'</div>':'')+'</span>';
+      list.appendChild(div);
+    });
+  }
+
+  // ---------- supply ----------
+  function renderSupply(){
+    var list=$("supList"); if(!list) return;
+    var b=state.board, arr=(b&&Array.isArray(b.supplyRequests))?b.supplyRequests.slice():[];
+    var open=arr.filter(function(r){ return r&&r.status!=="Filled"; });
+    var filled=arr.length-open.length;
+    var urg=open.filter(function(r){ return r.priority==="Urgent"; }).length;
+    $("supVal").textContent=String(open.length);
+    $("supSub").textContent=(urg?urg+" URGENT · ":"")+filled+" filled";
+    $("tileSupply").className="tile "+(urg?"alert":(open.length?"warn2":"good"));
+    $("supToggle").textContent=showFilled?"hide filled":"show filled ("+filled+")";
+    var ORDER={Urgent:0,Priority:1,Routine:2};
+    open.sort(function(a,c){ var d=(ORDER[a.priority]!=null?ORDER[a.priority]:9)-(ORDER[c.priority]!=null?ORDER[c.priority]:9); if(d) return d; return (c._m||0)-(a._m||0); });
+    var rows=showFilled?open.concat(arr.filter(function(r){ return r&&r.status==="Filled"; })):open;
+    list.innerHTML="";
+    if(!rows.length){ list.innerHTML='<div class="empty">'+(b?"No open supply requests.":"—")+'</div>'; return; }
+    rows.forEach(function(r){
+      var pri=(r.priority||"Routine"), pc=pri.toLowerCase();
+      var div=document.createElement("div"); div.className="li"+(r.status!=="Filled"&&pri==="Urgent"?" urgent":(r.status!=="Filled"&&pri==="Priority"?" priority":""));
+      div.innerHTML='<div class="li-top"><span class="chip ch-'+pc+'">'+esc(pri.toUpperCase())+'</span>'+
+        '<span class="chip ch-'+(r.status==="Filled"?"filled":"open")+'">'+esc((r.status||"Open").toUpperCase())+'</span>'+
+        '<span class="li-t">'+esc(fmtHm(r.time))+(r.platoon?' · '+esc(r.platoon):'')+'</span></div>'+
+        '<div class="li-main">'+esc(r.item||"(item)")+(r.qty?' × '+esc(r.qty):'')+'</div>'+
+        (r.notes?'<div class="li-sub">'+esc(r.notes)+'</div>':'');
+      list.appendChild(div);
+    });
+  }
+  $("supToggle").addEventListener("click",function(){ showFilled=!showFilled; renderSupply(); });
+
+  // ---------- RFIs ----------
+  function renderRfis(){
+    var list=$("rfiList"); if(!list) return;
+    var b=state.board, arr=(b&&Array.isArray(b.rfis))?b.rfis.slice():[];
+    var open=arr.filter(function(r){ return r&&r.status==="Open"; });
+    $("rfiVal").textContent=String(open.length);
+    $("rfiSub").textContent=(arr.length-open.length)+" answered/closed";
+    $("tileRfi").className="tile "+(open.length?"warn2":"good");
+    $("rfiToggle").textContent=showClosed?"hide closed":"show closed ("+(arr.length-open.length)+")";
+    var rows=showClosed?arr:open;
+    rows.sort(function(a,c){ return (c._m||0)-(a._m||0); });
+    list.innerHTML="";
+    if(!rows.length){ list.innerHTML='<div class="empty">'+(b?"No open RFIs.":"—")+'</div>'; return; }
+    rows.forEach(function(r){
+      var st=(r.status||"Open");
+      var div=document.createElement("div"); div.className="li";
+      div.innerHTML='<div class="li-top"><span class="chip ch-'+st.toLowerCase()+'">'+esc(st.toUpperCase())+'</span>'+
+        '<span class="chip ch-routine">'+esc((r.kind||"RFI").toUpperCase())+'</span>'+
+        '<span class="li-t">'+esc(fmtHm(r.time))+(r.platoon?' · '+esc(r.platoon):'')+'</span></div>'+
+        '<div class="li-sub" style="color:var(--ink)">'+esc(r.text||"")+'</div>'+
+        (r.answer?'<div class="li-ans">'+esc(r.answer)+'</div>':'');
+      list.appendChild(div);
+    });
+  }
+  $("rfiToggle").addEventListener("click",function(){ showClosed=!showClosed; renderRfis(); });
+
+  // ---------- medic dispatches (read-only, operational only) ----------
+  function renderMedic(){
+    var list=$("medList"); if(!list) return;
+    var b=state.board, arr=(b&&Array.isArray(b.medicRequests))?b.medicRequests.slice():[];
+    var act=arr.filter(function(r){ return r&&r.id&&String(r.status).toLowerCase()!=="resolved"; });
+    var emg=act.filter(function(r){ return r.urgency==="Emergency"; }).length;
+    $("medVal").textContent=String(act.length);
+    $("medSub").textContent=emg?emg+" EMERGENCY":"";
+    $("tileMedic").className="tile "+(emg?"alert":(act.length?"warn2":"good"));
+    var URG=["Emergency","Priority","Routine"];
+    act.sort(function(a,c){ var ua=URG.indexOf(a.urgency), uc=URG.indexOf(c.urgency);
+      ua=ua<0?9:ua; uc=uc<0?9:uc; if(ua!==uc) return ua-uc; return (a._m||0)-(c._m||0); });
+    list.innerHTML="";
+    if(!act.length){ list.innerHTML='<div class="empty">'+(b?"No active dispatches.":"—")+'</div>'; return; }
+    act.forEach(function(r){
+      var urg=(r.urgency||"Routine"), st=String(r.status||"New");
+      var div=document.createElement("div"); div.className="li"+(urg==="Emergency"?" urgent":(urg==="Priority"?" priority":""));
+      div.innerHTML='<div class="li-top"><span class="chip ch-'+(urg==="Emergency"?"urgent":urg.toLowerCase())+'">'+esc(urg.toUpperCase())+'</span>'+
+        '<span class="chip ch-'+st.toLowerCase().replace(/\s+/g,"")+'">'+esc(st.toUpperCase())+(r.by?" · "+esc(r.by):"")+'</span>'+
+        '<span class="li-t">'+esc(fmtHm(r.time))+(r.platoon?' · '+esc(r.platoon):'')+'</span></div>'+
+        '<div class="li-main">'+esc(r.category||"Medical")+(r.location?' · '+esc(r.location):'')+'</div>';
+      list.appendChild(div);
+    });
+  }
+
+  // ---------- GSAs + sensitive items ----------
+  function renderGsa(){
+    var list=$("gsaList"); if(!list) return;
+    var b=state.board, arr=(b&&Array.isArray(b.gsas))?b.gsas:[];
+    $("gsaK").textContent=(b&&b.gsaLabel)||"GSAs";
+    var out=arr.filter(function(g){ return g&&String(g.holder||"").trim(); }).length;
+    $("gsaCount").textContent=arr.length?arr.length+" · "+out+" signed out":"";
+    list.innerHTML="";
+    if(!arr.length){ list.innerHTML='<div class="empty">'+(b?"None tracked.":"—")+'</div>'; }
+    arr.forEach(function(g){
+      if(!g||!(g.name||g.holder||g.loc)) return;
+      var div=document.createElement("div"); div.className="li";
+      var who=String(g.holder||"").trim();
+      div.innerHTML='<div class="li-top"><span class="li-main">'+esc(g.name||"(GSA)")+'</span>'+
+        '<span class="li-t">'+(who?("with "+esc(who)):("at "+esc(g.loc||"—")))+'</span></div>';
+      list.appendChild(div);
+    });
+    var si=(b&&Array.isArray(b.sensitive))?b.sensitive.filter(function(it){ return (+it.qty||0)>0; }):[];
+    var line=$("siLine");
+    if(!si.length){ line.textContent=""; }
+    else{
+      var okAll=si.every(function(it){ return (+it.oh||0)===(+it.qty||0); });
+      var q=si.reduce(function(a,it){ return a+(+it.qty||0); },0);
+      line.innerHTML='Sensitive items: <b style="color:'+(okAll?"var(--green)":"var(--red)")+'">'+
+        (okAll?("ALL ACCOUNTED ("+q+")"):"DISCREPANCY")+'</b>'+((b&&b.siCheck)?' · last check '+esc(b.siCheck):'');
+    }
+  }
+
+  // ---------- incidents & heat casualties ----------
+  function renderInc(){
+    var list=$("incList"); if(!list) return;
+    var b=state.board, inc=(b&&Array.isArray(b.incidents))?b.incidents:[], hc=(b&&Array.isArray(b.heatCas))?b.heatCas:[];
+    var open=inc.filter(function(r){ return r&&String(r.status)!=="Closed"; }).length;
+    var strokes=hc.filter(function(x){ return x&&x.type==="Heat stroke"; }).length;
+    $("incCount").textContent=inc.length+" incidents ("+open+" open) · "+hc.length+" heat"+(strokes?" · "+strokes+" STROKE":"");
+    list.innerHTML="";
+    if(!inc.length&&!hc.length){ list.innerHTML='<div class="empty">'+(b?"None logged.":"—")+'</div>'; return; }
+    hc.slice(-3).reverse().forEach(function(x){
+      var div=document.createElement("div"); div.className="li"+(x.type==="Heat stroke"?" urgent":"");
+      div.innerHTML='<div class="li-top"><span class="chip '+(x.type==="Heat stroke"?"ch-urgent":"ch-priority")+'">HEAT</span>'+
+        '<span class="li-main">'+esc(x.type||"Heat case")+'</span><span class="li-t">'+esc(x.time||"")+'</span></div>'+
+        ((x.action||"").trim()?'<div class="li-sub">'+esc(x.action)+'</div>':'');
+      list.appendChild(div);
+    });
+    inc.slice(-4).reverse().forEach(function(r){
+      var div=document.createElement("div"); div.className="li";
+      div.innerHTML='<div class="li-top"><span class="chip '+(String(r.status)==="Closed"?"ch-closed":"ch-open")+'">'+esc(String(r.status||"Open").toUpperCase())+'</span>'+
+        '<span class="li-main">'+esc(r.type||"Incident")+'</span><span class="li-t">'+esc(r.time||"")+'</span></div>'+
+        ((r.remarks||"").trim()?'<div class="li-sub">'+esc(String(r.remarks).slice(0,140))+'</div>':'');
+      list.appendChild(div);
+    });
+  }
+
+  // ---------- announcement + call ----------
+  function renderAnn(){
+    var b=state.board, msg=(b&&b.psgMsg)?String(b.psgMsg).trim():"";
+    var el=$("annTxt"); el.textContent=msg||"—"; el.className="ann"+(msg?"":" muted");
+    var phone=(b&&b.tocPhone)?String(b.tocPhone).trim():"";
+    var btn=$("btnCallToc");
+    if(phone){ btn.href="tel:"+phone.replace(/[^\d+]/g,""); btn.classList.remove("hide"); }
+    else btn.classList.add("hide");
+  }
+
+  // ---------- camp AAR (same rollup the medic page carries) ----------
+  function campAarText(){
+    var b=state.board||{}, L=[], line=function(s){ L.push(s==null?"":s); };
+    var c=campNow(), stamp=pad(c.h)+":"+pad(c.m);
+    line((b.campName||"CAMP").toUpperCase()+" — CAMP AAR (field rollup)");
+    line("Generated "+stamp+" local · Command Team view");
+    line("");
+    var roster=Array.isArray(b.roster)?b.roster:[];
+    var inn=0,off=0,pend=0,out=0,dep=0,abs=0;
+    roster.forEach(function(r){ var s=r&&r.status;
+      if(s==="In")inn++; else if(s==="Off-site")off++; else if(s==="Pending")pend++; else if(s==="Departed")dep++; else if(s==="Absent")abs++; else if(r) out++; });
+    var accountable=roster.length-dep-abs, accounted=inn+off+pend, pct=accountable>0?Math.round(accounted/accountable*1000)/10:null;
+    line("1. PERSONNEL");
+    if(roster.length){
+      line("   Accountability: "+inn+"/"+accountable+(pct===null?"":" ("+pct+"%)")+(off?" · "+off+" off-site":"")+(pend?" · "+pend+" pending":"")+(out?" · "+out+" out":""));
+      line("   Roster "+roster.length+" · departed "+dep+" · absent "+abs);
+    } else line("   No roster data on this device yet.");
+    line("");
+    var hc=Array.isArray(b.heatCas)?b.heatCas:[], strokes=hc.filter(function(x){ return x&&x.type==="Heat stroke"; }).length;
+    line("2. SAFETY & HEAT");
+    line("   Heat casualties (camp total): "+hc.length+(strokes?" ("+strokes+" HEAT STROKE)":""));
+    line("");
+    var inc=Array.isArray(b.incidents)?b.incidents:[];
+    var closed=inc.filter(function(r){ return String(r.status)==="Closed"; }).length;
+    line("3. INCIDENTS (camp total "+inc.length+")");
+    line("   Open: "+(inc.length-closed)+" · closed: "+closed);
+    line("");
+    var sr=Array.isArray(b.supplyRequests)?b.supplyRequests:[], filled=sr.filter(function(r){ return r&&r.status==="Filled"; }).length;
+    var gl=Array.isArray(b.gsas)?b.gsas:[];
+    var siWith=(Array.isArray(b.sensitive)?b.sensitive:[]).filter(function(it){ return (+it.qty||0)>0; });
+    var siOK=siWith.length?siWith.every(function(it){ return (+it.oh||0)===(+it.qty||0); }):null;
+    var siQ=siWith.reduce(function(a,it){ return a+(+it.qty||0); },0);
+    line("4. LOGISTICS");
+    line("   Supply requests: "+sr.length+" ("+filled+" filled / "+(sr.length-filled)+" open)");
+    line("   "+String(b.gsaLabel||"GSAs").toUpperCase()+": "+gl.length);
+    if(siWith.length) line("   Sensitive items: "+(siOK?"ALL ACCOUNTED ("+siQ+")":"DISCREPANCY")+(b.siCheck?" · last check "+b.siCheck:""));
+    line("");
+    line("Note: the day-by-day arc and command narrative are maintained on the TOC board.");
+    return L.join("\n");
+  }
+  function copyText(t,ok){ try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok,function(){ fb(t,ok); }); return; } }catch(e){} fb(t,ok); }
+  function fb(t,ok){ try{ var ta=document.createElement("textarea"); ta.value=t; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.top="-1000px"; ta.style.opacity="0"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); ok(); }catch(e){ toast("Couldn't copy — long-press to select.",true); } }
+  $("btnCampAar").addEventListener("click",function(){ if(!state.board){ toast("Connect first — no board yet.",true); return; } $("campAarOut").textContent=campAarText(); $("campAar").classList.remove("hide"); });
+  $("campAarClose").addEventListener("click",function(){ $("campAar").classList.add("hide"); });
+  $("campAarCopy").addEventListener("click",function(){ copyText(campAarText(),function(){ toast("Camp AAR copied ✓"); }); });
+  $("campAarDl").addEventListener("click",function(){
+    try{ var d0=new Date(), stamp=d0.getFullYear()+pad(d0.getMonth()+1)+pad(d0.getDate())+"-"+pad(d0.getHours())+pad(d0.getMinutes());
+      var safe=((state.board&&state.board.campName)||"camp").replace(/[^a-z0-9]+/gi,"-").replace(/^-+|-+$/g,"").toLowerCase()||"camp";
+      var blob=new Blob([campAarText()],{type:"text/plain"}), a=document.createElement("a");
+      a.href=URL.createObjectURL(blob); a.download=safe+"-CAMP-AAR-"+stamp+".txt"; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },0);
+    }catch(e){ toast("Download failed — try Copy.",true); }
+  });
+
+  // ---------- setup ----------
+  function openSetup(first){
+    $("setUrl").value=state.url||"";
+    $("setupTitle").textContent=first?"Command Team view — setup":"Settings";
+    $("setCancel").style.display=first?"none":"";
+    $("setup").classList.remove("hide");
+  }
+  function closeSetup(){ $("setup").classList.add("hide"); }
+  $("setSave").addEventListener("click",function(){
+    var url=$("setUrl").value.trim();
+    if(!/^https?:\/\/.+/.test(url)){ $("setUrl").focus(); $("setUrl").style.borderColor="var(--red)"; return; }
+    try{ localStorage.setItem(LS_URL,url); }catch(e){}
+    closeSetup(); connect();
+  });
+  $("setCancel").addEventListener("click",closeSetup);
+  $("btnSettings").addEventListener("click",function(){ openSetup(false); });
+
+  // ---------- render ----------
+  function render(){
+    var b=state.board;
+    if(b&&b.campName) $("hCamp").textContent=String(b.campName).toUpperCase();
+    setStatus();
+    renderAcct(); renderHeat(); renderNowNext(); renderSupply(); renderRfis();
+    renderMedic(); renderGsa(); renderInc(); renderAnn();
+    var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); $("updated").textContent="updated "+pad(c.h)+":"+pad(c.m)+" CT";
+  }
+
+  setInterval(function(){ var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); freshWatchdog(); },1000);
+  setInterval(renderNowNext,30000); // events advance with the clock
+
+  // pre-fill from a shared link: command.html?sync=<exec>
+  try{ var qs=new URLSearchParams(location.search); var qSync=qs.get("sync");
+    if(qSync){ localStorage.setItem(LS_URL,qSync); history.replaceState(null,"",location.pathname); } }catch(e){}
+
+  connect();
+})();
+</script>
+<script>
+// ---------- app-version check: no phone can keep running an outdated cached page ----------
+(function(){
+  var APP_VERSION="2027.4"; // keep in step with version.json on each deploy
+  try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
+  var bar=null;
+  function show(){ if(bar) return;
+    bar=document.createElement("div");
+    bar.style.cssText="position:fixed;left:10px;right:10px;bottom:12px;z-index:9999;background:#f5b62c;color:#241a05;font:600 14px system-ui,sans-serif;padding:12px 14px;border-radius:12px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5);cursor:pointer";
+    bar.textContent="⬆ New version available — tap to update";
+    bar.addEventListener("click",function(){ location.replace(location.pathname+"?u="+Date.now()+location.hash); });
+    document.body.appendChild(bar);
+  }
+  function check(){
+    try{
+      fetch("version.json?fresh="+Date.now(),{cache:"no-store"})
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(j){ if(j&&j.version&&String(j.version)!==APP_VERSION) show(); })
+        .catch(function(){});
+    }catch(e){}
+  }
+  check(); setInterval(check,300000);
+  document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
+})();
+</script>
+</body>
+</html>

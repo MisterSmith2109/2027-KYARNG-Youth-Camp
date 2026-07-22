@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12140e">
+<title>Medic Dashboard — KYARNG Youth Camp</title>
+<style>
+  :root{
+    --bg:#101208; --panel:#1b1e16; --panel-2:#242a1c; --line:#454b38; --line-soft:#2f3426;
+    --ink:#f1f2e2; --muted:#a9b08d; --olive:#9aab52; --olive-bright:#c6dc6e;
+    --amber:#f5b62c; --green:#5fd257; --red:#f4553b; --steel:#57bde0; --black-status:#8b917a;
+    --mono:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.4;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:600px;margin:0 auto;padding:12px 12px 40px}
+  button,input,select,textarea{font-family:inherit;font-size:16px} button{cursor:pointer}
+  .mono{font-family:var(--mono)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 12px;border-bottom:2px solid var(--red)}
+  .h-name{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#e6a99c}
+  .h-role{font-weight:800;font-size:20px;line-height:1.1}
+  .h-right{text-align:right}
+  .h-time{font-family:var(--mono);font-size:15px;font-weight:700}
+  .h-stat{font-family:var(--mono);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px;justify-content:flex-end;margin-top:2px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--black-status);flex:none}
+  .dot.on{background:var(--green)} .dot.warn{background:var(--amber)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 15px;margin-top:12px}
+  .k{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .muted{color:var(--muted)} .hide{display:none!important}
+  .sec-hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+
+  /* paging alert */
+  .page-alert{background:var(--red);color:#2a0d08;border:none;display:flex;align-items:center;gap:10px;padding:12px 14px}
+  .pa-main{flex:1;min-width:0} .pa-k{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.14em}
+  .pa-txt{font-size:18px;font-weight:800;margin-top:2px}
+  .pa-x{background:rgba(42,13,8,.2);border:none;color:#2a0d08;font-size:22px;width:34px;height:34px;border-radius:8px;flex:none}
+
+  /* requests */
+  .req{border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:10px;background:var(--panel-2)}
+  .req.emergency{border-color:var(--red);background:#241210}
+  .req.priority{border-color:var(--amber)}
+  .req-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .req-urg{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:5px}
+  .urg-emergency{background:var(--red);color:#2a0d08} .urg-priority{background:var(--amber);color:#241a05} .urg-routine{background:var(--panel);color:var(--olive-bright);border:1px solid var(--line)}
+  .req-cat{font-weight:700;font-size:16px} .req-time{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+  .req-loc{font-size:15px;color:var(--olive-bright);font-weight:600;margin-top:5px}
+  .req-note{font-size:14px;margin-top:3px;white-space:pre-wrap;word-wrap:break-word}
+  .req-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:5px}
+  .req-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .req-btn{flex:1;min-width:90px;min-height:42px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-weight:700}
+  .req-btn.go{background:var(--olive);color:#12140e;border-color:var(--olive-bright)}
+  .req-btn.done{background:#10231a;border-color:var(--green);color:#cdeccd}
+  .req-empty{padding:14px 4px;text-align:center}
+  .req-stat{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 8px;border-radius:20px}
+  .st-acknowledged{background:var(--panel);color:var(--amber);border:1px solid var(--line)}
+  .st-enroute{background:var(--panel);color:var(--olive-bright);border:1px solid var(--line)}
+
+  /* heat */
+  .heat{border:none;padding:0;overflow:hidden}
+  .heat-top{padding:14px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .heat-cat{font-family:var(--mono);font-weight:800;font-size:20px;letter-spacing:.04em}
+  .heat-flagword{font-family:var(--mono);font-size:12px;font-weight:700;opacity:.85}
+  .heat-wbgt{font-family:var(--mono);font-weight:800;font-size:30px;line-height:1;text-align:right}
+  .heat-wbgt small{font-size:12px;font-weight:600;opacity:.8}
+  .heat-body{background:var(--panel);padding:12px 15px;font-size:14px}
+  .heat-NA{background:var(--panel-2);color:var(--muted)} .heat-LOW{background:var(--panel-2);color:var(--olive-bright)}
+  .heat-GREEN{background:var(--green);color:#0f1a0e} .heat-YELLOW{background:var(--amber);color:#241a05}
+  .heat-RED{background:var(--red);color:#2a0d08} .heat-BLACK{background:#15160f;color:#e9ead9;border-bottom:1px solid var(--line)}
+
+  /* plan */
+  .plan-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line-soft)}
+  .plan-row:first-child{border-top:none}
+  .plan-t{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:78px;flex:none}
+  .plan-main{flex:1;min-width:0}
+  .plan-who{font-size:15px;font-weight:600} .plan-where{font-size:13px;color:var(--olive-bright)}
+  .plan-del{background:none;border:none;color:var(--muted);font-size:19px;line-height:1;padding:0 6px;flex:none}
+  .linkline{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .minibtn{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 12px;min-height:40px;font-weight:700;font-size:14px}
+
+  /* actions */
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .abtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:66px;border-radius:12px;border:1px solid var(--line);
+    text-decoration:none;color:var(--ink);font-weight:700;font-size:15px;text-align:center;padding:10px}
+  .abtn .ico{font-size:20px;line-height:1}
+  .abtn.form{background:#2a1410;border-color:var(--red);color:#ffd9d1}
+  .abtn.call{background:#2a1008;border-color:var(--red);color:#ffcaba}
+  .abtn.enc{background:#16202b;border-color:#5a7d8c;color:#cfe3ef}
+  .abtn.plan{background:#1a2118;border-color:var(--olive);color:var(--olive-bright)}
+  .abtn.aar{background:#15202a;border-color:#5a8ca8;color:#cfe6f2}
+  .aar-out{font-family:var(--mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:10px;max-height:56vh;overflow:auto;color:var(--ink)}
+  .abtn.disabled{opacity:.4;pointer-events:none}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#0f1a0e;font-weight:700;
+    padding:11px 18px;border-radius:10px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+  .toast.show{opacity:1} .toast.err{background:var(--red);color:#2a0d08}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,11,8,.94);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;max-width:460px;width:100%;max-height:92vh;overflow-y:auto}
+  .sheet h1{font-size:19px;margin:0 0 4px} .sheet p{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);min-height:44px}
+  .field textarea{font-size:16px;line-height:1.4;resize:vertical}
+  .primary{width:100%;min-height:48px;border-radius:10px;border:1px solid var(--olive-bright);background:var(--olive);color:#12140e;font-weight:800;font-size:16px;margin-top:4px}
+  .linkbtn{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:13px;padding:8px}
+  .warn-box{background:#2a1410;border:1px solid var(--red);color:#ffd9d1;font-size:13px;padding:10px 12px;border-radius:9px;margin-bottom:12px}
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .foot button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 11px;min-height:40px}
+  /* encounter / notes list */
+  .nt-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line-soft)}
+  .nt-row:first-child{border-top:none}
+  .nt-main{flex:1;min-width:0}
+  .nt-when{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .nt-text{font-size:15px;white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere;margin-top:2px}
+  .nt-del{background:none;border:none;color:var(--muted);font-size:20px;line-height:1;padding:2px 8px;min-height:36px;flex:none}
+  #encList{max-height:40vh;overflow-y:auto}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+  /* ================= NEO THEME — futuristic glass HUD (opt-in via the footer toggle) ================= */
+  html[data-theme="neo"]{
+    --bg:#060910;
+    --panel:rgba(15,24,41,.86);
+    --panel-2:rgba(122,208,238,.14);
+    --line:rgba(126,216,244,.38);
+    --line-soft:rgba(126,216,244,.18);
+    --ink:#f2fbff;
+    --muted:#b3d4e8;
+    --olive:#25d8ee;
+    --olive-bright:#6cf1ff;
+    --amber:#ffd23a;
+    --green:#2bf5a4;
+    --red:#ff5470;
+    --steel:#5ad2ff;
+    --black-status:#6a7d8c;
+  }
+  html[data-theme="neo"] body{ background:#060910; }
+  html[data-theme="neo"] body::before{ content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(900px 620px at 8% -8%, rgba(40,190,215,.16), transparent 60%),
+      radial-gradient(760px 620px at 112% 6%, rgba(57,239,171,.10), transparent 55%),
+      radial-gradient(700px 760px at 50% 120%, rgba(70,120,255,.10), transparent 60%),
+      linear-gradient(180deg,#070d17,#04070d); }
+  html[data-theme="neo"] body::after{ content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.24;
+    background-image:linear-gradient(rgba(120,210,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(120,210,235,.05) 1px,transparent 1px);
+    background-size:42px 42px;
+    -webkit-mask-image:radial-gradient(130% 85% at 50% 0%,#000 50%,transparent 100%);
+            mask-image:radial-gradient(130% 85% at 50% 0%,#000 50%,transparent 100%); }
+  html[data-theme="neo"] .card{ -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);border-radius:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 30px -20px rgba(0,0,0,.95); }
+  html[data-theme="neo"] header{ border-bottom-color:var(--red); }        /* keep the medical red identity */
+  html[data-theme="neo"] .h-name{ text-shadow:0 0 14px rgba(255,120,140,.5) }
+  html[data-theme="neo"] input,html[data-theme="neo"] select,html[data-theme="neo"] textarea{ background:rgba(7,12,22,.86);border-color:var(--line-soft);color:var(--ink) }
+</style>
+<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite">
+  <header>
+    <div>
+      <div class="h-name" id="hCamp">KYARNG YOUTH CAMP</div>
+      <div class="h-role">Medic</div>
+    </div>
+    <div class="h-right">
+      <div class="h-time mono" id="hTime">--:--</div>
+      <div class="h-stat"><span class="dot" id="hDot"></span><span id="hStat">connecting…</span></div>
+    </div>
+  </header>
+
+  <div class="card page-alert hide" id="pageAlert">
+    <div class="pa-main"><span class="pa-k">MEDIC PAGE</span><div class="pa-txt" id="pageTxt">—</div></div>
+    <button class="pa-x" id="pageX" aria-label="Dismiss">×</button>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Active requests</span><span class="k" id="reqCount"></span></div>
+    <div id="reqList"></div>
+  </div>
+
+  <div class="card heat">
+    <div class="heat-top heat-NA" id="heatTop">
+      <div><div class="heat-cat" id="heatCat">— set at TOC —</div><div class="heat-flagword" id="heatFlag"></div></div>
+      <div class="heat-wbgt"><span id="heatWbgt">--</span><small>°F WBGT</small></div>
+    </div>
+    <div class="heat-body" id="heatGuide">—</div>
+  </div>
+
+  <div class="card">
+    <div class="sec-hd"><span class="k">Medic posting — <span id="planDay">today</span></span><button class="minibtn" id="planAdd" style="display:none">+ Add</button></div>
+    <div id="planList"></div>
+    <div class="linkline"><button class="linkbtn" id="planWeek">show full week</button></div>
+  </div>
+
+  <div class="actions">
+    <a class="abtn form disabled" id="btnForm" target="_blank" rel="noopener"><span class="ico">📝</span>Incident Report Form</a>
+    <a class="abtn call" id="btn911" href="tel:911"><span class="ico">🚑</span>Call 911</a>
+    <button class="abtn enc" id="btnEnc"><span class="ico">🗒️</span>Encounter Log</button>
+    <button class="abtn aar" id="btnCampAar"><span class="ico">📋</span>Camp AAR</button>
+    <button class="abtn plan" id="btnSettings"><span class="ico">⚙️</span>Settings</button>
+  </div>
+
+  <div class="foot"><span id="updated">—</span><span><button id="btnTheme" title="Switch between the Field look and the futuristic Neo look">◐ Neo</button></span></div>
+</div>
+
+<!-- setup / settings -->
+<div class="overlay hide" id="setup">
+  <div class="sheet">
+    <h1 id="setupTitle">Medic Dashboard</h1>
+    <p>Paste the camp sync link (from the TOC). This dashboard reads the board and posts medic-request status and postings — it never carries camper medical details.</p>
+    <div class="field"><label>Camp sync link</label>
+      <input id="setUrl" placeholder="https://script.google.com/macros/s/…/exec" inputmode="url" autocapitalize="off" autocorrect="off"></div>
+    <div class="field"><label>Your name (optional)</label><input id="setName" placeholder="e.g. SGT Rivera"></div>
+    <div class="field"><label>Role</label>
+      <select id="setLead"><option value="0">Medic</option><option value="1">Lead Medic (can edit postings)</option></select></div>
+    <button class="primary" id="setSave">Save &amp; connect</button>
+    <div style="text-align:center"><button class="linkbtn" id="setCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- posting editor (lead medic) -->
+<div class="overlay hide" id="posting">
+  <div class="sheet">
+    <h1 id="postTitle">Add posting</h1>
+    <p>Where a medic is posted. Staff scheduling only — no medical info.</p>
+    <div class="field"><label>Day</label><select id="postDay"></select></div>
+    <div class="field"><label>Time / shift</label><input id="postTime" placeholder="e.g. 0900-1200 or AM"></div>
+    <div class="field"><label>Medic</label><input id="postWho" placeholder="name"></div>
+    <div class="field"><label>Location</label><input id="postWhere" placeholder="e.g. Pool, Aid Station"></div>
+    <button class="primary" id="postSave">Save posting</button>
+    <div style="text-align:center"><button class="linkbtn" id="postCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- encounter log (private, local) -->
+<div class="overlay hide" id="enc">
+  <div class="sheet">
+    <h1>Encounter Log</h1>
+    <div class="warn-box">Private to this device — not synced, not backed up. For your working notes; transfer anything official into the camp medical record. Keep to what your SOP allows.</div>
+    <div class="field"><label>New entry</label><textarea id="encText" rows="3" placeholder="time, what you assessed, what you did"></textarea></div>
+    <button class="primary" id="encAdd">Add entry</button>
+    <div class="sec-hd hide" id="encHead" style="margin-top:16px"><span class="k">Entries</span><button class="linkbtn" id="encCopy">copy all</button></div>
+    <div id="encList"></div>
+    <div style="text-align:center;margin-top:12px"><button class="linkbtn" id="encClose">Done</button></div>
+  </div>
+</div>
+
+<!-- camp AAR (read-only field rollup from the synced board) -->
+<div class="overlay hide" id="campAar">
+  <div class="sheet">
+    <h1>Camp AAR</h1>
+    <p>An overall camp rollup from the shared board &mdash; personnel, heat, incidents, logistics. Read-only; the day-by-day arc and command narrative live on the TOC.</p>
+    <div class="aar-out" id="campAarOut">—</div>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="primary" id="campAarCopy" style="margin-top:0">Copy</button><button class="primary" id="campAarDl" style="margin-top:0;background:var(--panel-2);color:var(--ink);border-color:var(--line)">Download</button></div>
+    <div style="text-align:center;margin-top:10px"><button class="linkbtn" id="campAarClose">Done</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  // ---------- theme toggle (Field <-> opt-in Neo) ----------
+  (function(){ var KEY="kyarng-camp-theme", root=document.documentElement;
+    var lbl=function(){ var b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field":"◐ Neo"; };
+    lbl();
+    var b=$("btnTheme"); if(b) b.addEventListener("click",function(){ var neo=root.getAttribute("data-theme")==="neo";
+      if(neo) root.removeAttribute("data-theme"); else root.setAttribute("data-theme","neo");
+      try{ localStorage.setItem(KEY, neo?"field":"neo"); }catch(e){} lbl(); });
+  })();
+  var LS_URL="kyarng-medic-url", LS_NAME="kyarng-medic-name", LS_LEAD="kyarng-medic-lead",
+      LS_BOARD="kyarng-medic-board", LS_OUTBOX="kyarng-medic-outbox", LS_ENC="kyarng-medic-enc",
+      LS_NOTIFY="kyarng-medic-notify", LS_PAGED="kyarng-medic-paged";
+  var CAMP_TZ="America/Chicago";
+  var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
+  var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
+  var URG=["Emergency","Priority","Routine"], STATUSES=["New","Acknowledged","En route","Resolved"];
+
+  var HEATCATS={
+    NA:{cls:"heat-NA",name:"— set WBGT —",flag:"",g:"The TOC hasn't set a WBGT reading yet."},
+    BELOW:{cls:"heat-LOW",name:"BELOW CAT 1",flag:"Low risk",g:"Low heat risk. Keep water available."},
+    C1:{cls:"heat-GREEN",name:"CATEGORY 1",flag:"Green flag",g:"Use discretion for intense/prolonged exertion. Water ~every 45 min."},
+    C2:{cls:"heat-YELLOW",name:"CATEGORY 2",flag:"Yellow flag",g:"Limit strenuous activity; shade rest between bouts. Water ~every 30 min."},
+    C3:{cls:"heat-RED",name:"CATEGORY 3",flag:"Red flag",g:"Curtail strenuous activity; mandatory shade rest. Water ~every 20–30 min. Watch for heat illness."},
+    C4:{cls:"heat-BLACK",name:"CATEGORY 4",flag:"Black flag",g:"Suspend strenuous outdoor activity. Continuous hydration; active heat-illness watch."},
+    C5:{cls:"heat-BLACK",name:"CATEGORY 5",flag:"Black flag",g:"Suspend all outdoor activity. Active heat-illness watch."}
+  };
+  function heatCat(wb){ wb=(wb==null||wb==="")?null:+wb; if(wb==null||isNaN(wb)) return HEATCATS.NA;
+    if(wb>=90)return HEATCATS.C5; if(wb>=88)return HEATCATS.C4; if(wb>=85)return HEATCATS.C3;
+    if(wb>=82)return HEATCATS.C2; if(wb>=78)return HEATCATS.C1; return HEATCATS.BELOW; }
+
+  function pad(n){ n=+n; return (n<10?"0":"")+n; }
+  function campNow(){ var p={};
+    try{ new Intl.DateTimeFormat("en-US",{timeZone:CAMP_TZ,hour12:false,weekday:"short",hour:"2-digit",minute:"2-digit"})
+      .formatToParts(new Date()).forEach(function(x){ if(x.type!=="literal") p[x.type]=x.value; }); }
+    catch(e){ var d=new Date(); return {h:d.getHours(),m:d.getMinutes(),dayIdx:(d.getDay()+1)%7}; }
+    return {h:parseInt(p.hour,10)%24, m:parseInt(p.minute,10), dayIdx:WEEKDAY_IDX[p.weekday]}; }
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  var state={ board:null, rev:-1, url:"", online:false };
+  var medicName="", isLead=false, showWeek=false;
+
+  function saveBoardCache(){ try{ if(state.board) localStorage.setItem(LS_BOARD, JSON.stringify({rev:state.rev,board:state.board})); }catch(e){} }
+  function restoreBoardCache(){ try{ var o=JSON.parse(localStorage.getItem(LS_BOARD)||"null"); if(o&&o.board){ state.board=o.board; state.rev=+(o.rev||0); } }catch(e){} }
+
+  // ---------- toast ----------
+  var toastTimer=null;
+  function toast(msg,err){ var t=$("toast"); if(!t) return; t.textContent=msg; t.className="toast show"+(err?" err":""); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.className="toast"+(err?" err":""); },2800); }
+
+  // ---------- sync ----------
+  var pollTimer=null;
+  function connect(){
+    state.url=""; try{ state.url=localStorage.getItem(LS_URL)||""; medicName=localStorage.getItem(LS_NAME)||""; isLead=localStorage.getItem(LS_LEAD)==="1"; }catch(e){}
+    restoreBoardCache();
+    if(state.url){ render(); pull(); flushOutbox(); clearInterval(pollTimer); pollTimer=setInterval(pull,10000); }
+    else { openSetup(true); }
+  }
+  function pull(){
+    if(!state.url) return;
+    fetch(state.url,{method:"GET"}).then(function(r){return r.text();}).then(function(txt){
+      var env=null; try{ env=JSON.parse(txt); }catch(e){}
+      if(env&&env.board){ state.board=env.board; state.rev=+(env._rev||0); state.online=true; saveBoardCache(); }
+      else state.online=true;
+      render(); flushOutbox();
+    }).catch(function(){ state.online=false; setStatus(); });
+  }
+  function setStatus(){ var d=$("hDot"), s=$("hStat"), pend=loadOutbox().length;
+    if(state.online){ d.className="dot on"; s.textContent="live"+(pend?" · "+pend+" to send":""); }
+    else { d.className="dot warn"; s.textContent=pend?(pend+" to send — retrying"):"offline — retrying"; } }
+
+  // ---------- outbox (status updates + postings; append/upsert by id) ----------
+  function loadOutbox(){ try{ var a=JSON.parse(localStorage.getItem(LS_OUTBOX)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveOutbox(a){ try{ localStorage.setItem(LS_OUTBOX, JSON.stringify(a||[])); }catch(e){} }
+  function snapshotUpsert(listKey, rec){
+    var board=JSON.parse(JSON.stringify(state.board||{}));
+    if(!Array.isArray(board[listKey])) board[listKey]=[];
+    var i, found=false;
+    for(i=0;i<board[listKey].length;i++){ if(board[listKey][i]&&board[listKey][i].id===rec.id){ board[listKey][i]=rec; found=true; break; } }
+    if(!found) board[listKey].push(rec);
+    return board;
+  }
+  function queueSend(board, id, label){
+    var a=loadOutbox(); a.push({ id:id, board:board, label:label||"Update", tries:0 });
+    if(a.length>30) a=a.slice(a.length-30);
+    saveOutbox(a); setStatus(); flushOutbox();
+  }
+  var flushing=false, flushTimer=null;
+  function flushOutbox(){
+    clearTimeout(flushTimer); flushTimer=null;
+    if(flushing||!state.url) return;
+    var a=loadOutbox(); if(!a.length){ setStatus(); return; }
+    flushing=true; var item=a[0];
+    fetch(state.url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(item.board)})
+      .then(function(){ flushing=false; state.online=true;
+        var cur=loadOutbox().filter(function(x){ return x.id!==item.id; }); saveOutbox(cur);
+        setStatus(); if(cur.length) flushOutbox(); })
+      .catch(function(){ flushing=false; state.online=false;
+        var cur=loadOutbox(); if(cur[0]&&cur[0].id===item.id) cur[0].tries=(cur[0].tries||0)+1; saveOutbox(cur);
+        if(cur[0]&&cur[0].tries===1) toast(item.label+" saved — no signal, will retry",true);
+        setStatus(); var t=cur[0]?cur[0].tries:1; flushTimer=setTimeout(flushOutbox, Math.min(30000,2000*Math.pow(2,Math.min(4,t)))); });
+  }
+
+  // ---------- requests ----------
+  function reqsActive(){
+    var b=state.board, arr=(b&&Array.isArray(b.medicRequests))?b.medicRequests.slice():[];
+    arr=arr.filter(function(r){ return r&&r.id&&String(r.status).toLowerCase()!=="resolved"; });
+    arr.sort(function(a,c){ var ua=URG.indexOf(a.urgency), uc=URG.indexOf(c.urgency);
+      ua=ua<0?9:ua; uc=uc<0?9:uc; if(ua!==uc) return ua-uc; return (a._m||0)-(c._m||0); }); // urgency, then oldest first
+    return arr;
+  }
+  function nextStatus(s){ var i=STATUSES.indexOf(s); return (i<0)?"Acknowledged":(i>=STATUSES.length-1?"Resolved":STATUSES[i+1]); }
+  function advanceReq(id, to){
+    var b=state.board; if(!b||!Array.isArray(b.medicRequests)) return;
+    var rec=null; b.medicRequests.forEach(function(r){ if(r&&r.id===id) rec=r; });
+    if(!rec) return;
+    var upd=JSON.parse(JSON.stringify(rec)); upd.status=to; upd.by=medicName||upd.by||""; upd._m=Date.now();
+    var board=snapshotUpsert("medicRequests", upd); state.board=board; saveBoardCache();
+    queueSend(board, id, "Status update"); render();
+    toast(to==="Resolved"?"Marked resolved":(to+" ✓"));
+  }
+  function renderReqs(){
+    var list=$("reqList"), count=$("reqCount"); if(!list) return;
+    var arr=reqsActive();
+    var emg=arr.filter(function(r){ return r.urgency==="Emergency"; }).length;
+    count.textContent = arr.length ? (arr.length+" open"+(emg?" · "+emg+" EMERGENCY":"")) : "none";
+    list.innerHTML="";
+    if(!arr.length){ list.innerHTML='<div class="req-empty muted">'+(state.board?"No active requests.":"Connect to see requests.")+'</div>'; return; }
+    arr.forEach(function(r){
+      var urg=(r.urgency||"Routine"), uc=urg.toLowerCase(), st=String(r.status||"New");
+      var card=document.createElement("div"); card.className="req"+(urg==="Emergency"?" emergency":(urg==="Priority"?" priority":""));
+      var statChip = (st.toLowerCase()!=="new") ? '<span class="req-stat st-'+st.toLowerCase().replace(/\s+/g,"")+'">'+esc(st.toUpperCase())+(r.by?" · "+esc(r.by):"")+'</span>' : '';
+      var acts="";
+      var s=st.toLowerCase();
+      if(s==="new") acts='<button class="req-btn go" data-adv="'+esc(r.id)+'" data-to="Acknowledged">Acknowledge</button><button class="req-btn go" data-adv="'+esc(r.id)+'" data-to="En route">En route</button>';
+      else if(s==="acknowledged") acts='<button class="req-btn go" data-adv="'+esc(r.id)+'" data-to="En route">En route</button>';
+      acts+='<button class="req-btn done" data-adv="'+esc(r.id)+'" data-to="Resolved">Resolve</button>';
+      card.innerHTML=
+        '<div class="req-top"><span class="req-urg urg-'+uc+'">'+esc(urg.toUpperCase())+'</span>'+
+          '<span class="req-cat">'+esc(r.category||"Medical")+'</span>'+
+          '<span class="req-time">'+esc(fmtHm(r.time))+'</span></div>'+
+        (r.location?'<div class="req-loc">'+esc(r.location)+'</div>':'')+
+        (r.platoon?'<div class="req-meta">from '+esc(r.platoon)+'</div>':'')+
+        (r.note?'<div class="req-note">'+esc(r.note)+'</div>':'')+
+        (statChip?'<div class="req-meta">'+statChip+'</div>':'')+
+        '<div class="req-actions">'+acts+'</div>';
+      list.appendChild(card);
+    });
+  }
+  function fmtHm(t){ t=String(t||""); return /^\d{4}$/.test(t)?(t.slice(0,2)+":"+t.slice(2,4)):t; }
+
+  // ---------- paging alert on a new request ----------
+  function loadPaged(){ try{ var a=JSON.parse(localStorage.getItem(LS_PAGED)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function savePaged(a){ try{ localStorage.setItem(LS_PAGED, JSON.stringify((a||[]).slice(-100))); }catch(e){} }
+  function beep(){ try{ var AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; var c=new AC(),o=c.createOscillator(),g=c.createGain();
+    o.type="square";o.frequency.value=980;o.connect(g);g.connect(c.destination); g.gain.setValueAtTime(0.001,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.3,c.currentTime+0.02); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.6);
+    o.start();o.stop(c.currentTime+0.62); setTimeout(function(){try{c.close();}catch(e){}},900); }catch(e){} }
+  function pushOk(){ return ("Notification" in window)&&Notification.permission==="granted"&&(function(){ try{ return localStorage.getItem(LS_NOTIFY)==="1"; }catch(e){ return false; } })(); }
+  function checkPaging(){
+    var arr=reqsActive().filter(function(r){ return String(r.status).toLowerCase()==="new"; });
+    if(!arr.length){ return; }
+    var paged=loadPaged(), fresh=arr.filter(function(r){ return paged.indexOf(r.id)<0; });
+    if(!fresh.length) return;
+    fresh.forEach(function(r){ paged.push(r.id); }); savePaged(paged);
+    var top=fresh[0];
+    $("pageTxt").textContent=(top.urgency==="Emergency"?"EMERGENCY — ":"")+(top.category||"Medical")+(top.location?" · "+top.location:"")+(fresh.length>1?"  (+"+(fresh.length-1)+" more)":"");
+    $("pageAlert").classList.remove("hide");
+    beep(); setTimeout(beep,650); try{ if(navigator.vibrate) navigator.vibrate([250,120,250]); }catch(e){}
+    if(pushOk()){ try{ new Notification("Medic page"+(top.urgency==="Emergency"?" — EMERGENCY":""),
+      { body:(top.category||"Medical")+(top.location?" · "+top.location:"")+(top.platoon?" · "+top.platoon:""), tag:"medic-"+top.id }); }catch(e){} }
+  }
+  $("pageX").addEventListener("click",function(){ $("pageAlert").classList.add("hide"); });
+
+  // ---------- heat ----------
+  function renderHeat(){
+    var b=state.board, cat=heatCat(b?b.wbgt:null);
+    $("heatTop").className="heat-top "+cat.cls;
+    $("heatCat").textContent=cat.name; $("heatFlag").textContent=cat.flag;
+    $("heatWbgt").textContent=(b&&b.wbgt!=null&&b.wbgt!=="")?Math.round(+b.wbgt):"--";
+    $("heatGuide").textContent=cat.g;
+  }
+
+  // ---------- medic posting plan ----------
+  function planActive(){ var b=state.board, a=(b&&Array.isArray(b.medicPlan))?b.medicPlan.slice():[];
+    return a.filter(function(r){ return r&&r.id&&!r.deleted; }); }
+  function renderPlan(){
+    var list=$("planList"), dayEl=$("planDay"); if(!list) return;
+    $("planAdd").style.display=isLead?"":"none";
+    var today=CAMP_DAYS[campNow().dayIdx]||CAMP_DAYS[0];
+    dayEl.textContent=showWeek?"this week":today;
+    var rows=planActive().filter(function(r){ return showWeek || r.day===today; });
+    rows.sort(function(a,c){ var da=CAMP_DAYS.indexOf(a.day), dc=CAMP_DAYS.indexOf(c.day); if(da!==dc) return da-dc; return String(a.time||"").localeCompare(String(c.time||"")); });
+    $("planWeek").textContent=showWeek?"show today only":"show full week";
+    list.innerHTML="";
+    if(!rows.length){ list.innerHTML='<div class="req-empty muted">'+(isLead?"No postings yet — tap + Add.":"No postings set"+(showWeek?"":" for today")+".")+'</div>'; return; }
+    rows.forEach(function(r){
+      var row=document.createElement("div"); row.className="plan-row";
+      var when=(showWeek?(r.day?r.day.slice(0,3)+" ":""):"")+(r.time||"");
+      row.innerHTML='<div class="plan-t">'+esc(when||"—")+'</div>'+
+        '<div class="plan-main"><div class="plan-who">'+esc(r.medic||"(medic)")+'</div>'+
+        (r.location?'<div class="plan-where">'+esc(r.location)+'</div>':'')+'</div>'+
+        (isLead?'<button class="plan-del" data-editp="'+esc(r.id)+'" aria-label="Edit">✎</button>':'');
+      list.appendChild(row);
+    });
+  }
+  $("planWeek").addEventListener("click",function(){ showWeek=!showWeek; renderPlan(); });
+
+  // posting editor
+  var editingId="";
+  function fillDays(){ var s=$("postDay"); if(s.options.length) return; CAMP_DAYS.forEach(function(d){ var o=document.createElement("option"); o.textContent=d; o.value=d; s.appendChild(o); }); }
+  function openPosting(existing){
+    if(!isLead){ return; } fillDays();
+    editingId = existing?existing.id:"";
+    $("postTitle").textContent=existing?"Edit posting":"Add posting";
+    var today=CAMP_DAYS[campNow().dayIdx]||CAMP_DAYS[0];
+    $("postDay").value=existing?existing.day:today;
+    $("postTime").value=existing?(existing.time||""):"";
+    $("postWho").value=existing?(existing.medic||""):(medicName||"");
+    $("postWhere").value=existing?(existing.location||""):"";
+    $("posting").classList.remove("hide");
+  }
+  function closePosting(){ $("posting").classList.add("hide"); }
+  function savePosting(){
+    var rec={ id: editingId || ("mp"+Date.now().toString(36)+Math.random().toString(36).slice(2,5)),
+      day:$("postDay").value, time:$("postTime").value.trim(), medic:$("postWho").value.trim(),
+      location:$("postWhere").value.trim(), deleted:false, _m:Date.now() };
+    if(!rec.medic && !rec.location){ $("postWho").focus(); return; }
+    var board=snapshotUpsert("medicPlan", rec); state.board=board; saveBoardCache();
+    queueSend(board, rec.id, "Posting"); closePosting(); renderPlan(); toast("Posting saved");
+  }
+  function deletePosting(id){
+    var b=state.board, rec=null; (b&&b.medicPlan||[]).forEach(function(r){ if(r&&r.id===id) rec=r; });
+    if(!rec) return; var upd=JSON.parse(JSON.stringify(rec)); upd.deleted=true; upd._m=Date.now();
+    var board=snapshotUpsert("medicPlan", upd); state.board=board; saveBoardCache();
+    queueSend(board, id, "Posting"); renderPlan(); toast("Posting removed");
+  }
+  $("planAdd").addEventListener("click",function(){ openPosting(null); });
+  $("planList").addEventListener("click",function(e){ var b=e.target&&(e.target.classList.contains("plan-del")?e.target:null); if(!b) return;
+    var id=b.getAttribute("data-editp"); var rec=null; (state.board&&state.board.medicPlan||[]).forEach(function(r){ if(r&&r.id===id) rec=r; }); if(rec) openPosting(rec); });
+  $("postSave").addEventListener("click",savePosting);
+  $("postCancel").addEventListener("click",closePosting);
+  // long-press / secondary: a Delete option inside editor
+  var postDel=document.createElement("button"); postDel.className="linkbtn"; postDel.textContent="Delete this posting";
+  postDel.style.color="var(--red)"; postDel.addEventListener("click",function(){ if(editingId){ deletePosting(editingId); closePosting(); } });
+  $("postCancel").parentNode.appendChild(postDel);
+
+  // request action clicks
+  $("reqList").addEventListener("click",function(e){ var b=e.target&&(e.target.getAttribute&&e.target.getAttribute("data-adv")); if(!b) return;
+    advanceReq(b, e.target.getAttribute("data-to")); });
+
+  // ---------- encounter log (local, private) ----------
+  function loadEnc(){ try{ var a=JSON.parse(localStorage.getItem(LS_ENC)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveEnc(a){ try{ localStorage.setItem(LS_ENC, JSON.stringify(a||[])); }catch(e){} }
+  function encWhen(n){ return (n.day?n.day.slice(0,3).toUpperCase()+" ":"")+(n.time||""); }
+  function renderEnc(){
+    var list=$("encList"), head=$("encHead"); if(!list) return; var a=loadEnc();
+    if(head) head.classList.toggle("hide", a.length===0);
+    list.innerHTML="";
+    a.slice().reverse().forEach(function(n){ var row=document.createElement("div"); row.className="nt-row";
+      row.innerHTML='<div class="nt-main"><div class="nt-when">'+esc(encWhen(n))+(n.by?' · '+esc(n.by):'')+'</div><div class="nt-text">'+esc(n.text)+'</div></div>'+
+        '<button class="nt-del" data-encdel="'+esc(n.id)+'" aria-label="Delete">×</button>';
+      list.appendChild(row); });
+  }
+  function addEnc(){ var t=$("encText").value.trim(); if(!t){ $("encText").focus(); return; }
+    var c=campNow(), a=loadEnc();
+    a.push({ id:"en"+Date.now().toString(36)+Math.random().toString(36).slice(2,5), text:t, day:CAMP_DAYS[c.dayIdx]||"", time:pad(c.h)+":"+pad(c.m), by:medicName||"", _m:Date.now() });
+    if(a.length>500) a=a.slice(a.length-500);
+    saveEnc(a); $("encText").value=""; renderEnc(); toast("Entry saved"); $("encText").focus(); }
+  function copyText(t,ok){ try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok,function(){ fb(t,ok); }); return; } }catch(e){} fb(t,ok); }
+  function fb(t,ok){ try{ var ta=document.createElement("textarea"); ta.value=t; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.top="-1000px"; ta.style.opacity="0"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); ok(); }catch(e){ toast("Couldn't copy — long-press to select.",true); } }
+  function copyEnc(){ var a=loadEnc(); if(!a.length){ toast("No entries yet."); return; }
+    copyText("Medic encounter log\n"+a.map(function(n){ return encWhen(n)+(n.by?" ("+n.by+")":"")+" — "+n.text; }).join("\n"), function(){ toast("Log copied ✓"); }); }
+  function openEnc(){ renderEnc(); $("enc").classList.remove("hide"); setTimeout(function(){ $("encText").focus(); },50); }
+  function closeEnc(){ $("enc").classList.add("hide"); }
+  $("btnEnc").addEventListener("click",openEnc);
+  $("encAdd").addEventListener("click",addEnc);
+  $("encClose").addEventListener("click",closeEnc);
+  $("encCopy").addEventListener("click",copyEnc);
+
+  // ---------- camp AAR (read-only rollup built from the synced board) ----------
+  function aarIncKey(t){ t=String(t||"").trim(); if(!t) return Infinity;
+    var m=t.match(/^(\d{2})(\d{2})(\d{2})\s*Z?$/i); if(m){ var now=new Date(); return Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),+m[1],+m[2],+m[3]); }
+    var p=Date.parse(t); if(!isNaN(p)) return p;
+    var hm=t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap])\.?m?\.?$/i); if(hm){ var h=+hm[1],mn=+hm[2],ap=(hm[3]||"").toLowerCase(); if(ap==="p"&&h<12)h+=12; if(ap==="a"&&h===12)h=0; var d=new Date(); d.setHours(h,mn,0,0); return d.getTime(); }
+    var h24=t.match(/^(\d{1,2}):(\d{2})$/); if(h24){ var d2=new Date(); d2.setHours(+h24[1],+h24[2],0,0); return d2.getTime(); }
+    return Infinity; }
+  function campAarText(){
+    var b=state.board||{}, L=[], line=function(s){ L.push(s==null?"":s); };
+    var c=campNow(), stamp=pad(c.h)+":"+pad(c.m);
+    line((b.campName||"CAMP").toUpperCase()+" — CAMP AAR (field rollup)");
+    line("Generated "+stamp+" local"+(medicName?" · "+medicName:""));
+    line("");
+    var roster=Array.isArray(b.roster)?b.roster:[];
+    var inn=0,off=0,pend=0,out=0,dep=0,abs=0;
+    roster.forEach(function(r){ var s=r&&r.status;
+      if(s==="In")inn++; else if(s==="Off-site")off++; else if(s==="Pending")pend++; else if(s==="Departed")dep++; else if(s==="Absent")abs++; else if(r) out++; });
+    var accountable=roster.length-dep-abs, accounted=inn+off+pend, pct=accountable>0?Math.round(accounted/accountable*1000)/10:null;
+    line("1. PERSONNEL (final)");
+    if(roster.length){
+      line("   Accountability: "+inn+"/"+accountable+(pct===null?"":" ("+pct+"%)")+(off?" · "+off+" off-site":"")+(pend?" · "+pend+" pending":"")+(out?" · "+out+" out":""));
+      line("   Roster "+roster.length+" · departed "+dep+" · absent "+abs);
+    } else line("   No roster data on this device yet.");
+    line("");
+    var hc=Array.isArray(b.heatCas)?b.heatCas:[], strokes=hc.filter(function(x){ return x&&x.type==="Heat stroke"; }).length;
+    line("2. SAFETY & HEAT");
+    line("   Heat casualties (camp total): "+hc.length+(strokes?" ("+strokes+" HEAT STROKE)":""));
+    hc.forEach(function(x){ line("     "+((x.time||"").toString().trim()||"----")+" "+((x.name||"").toString().trim()||"(unnamed)")+" — "+(x.type||"")+((x.action||"").toString().trim()?": "+x.action.toString().trim():"")); });
+    line("");
+    var inc=(Array.isArray(b.incidents)?b.incidents.slice():[]).sort(function(x,y){ return aarIncKey(x.time)-aarIncKey(y.time); });
+    var medical=inc.filter(function(r){ return /medical/i.test(String(r.type||"")); }).length;
+    var closed=inc.filter(function(r){ return String(r.status)==="Closed"; }).length;
+    line("3. INCIDENTS (camp total "+inc.length+")");
+    line("   Medical: "+medical+" · open: "+(inc.length-closed)+" · closed: "+closed);
+    line("   (full incident log is on the TOC board.)");
+    line("");
+    var sr=Array.isArray(b.supplyRequests)?b.supplyRequests:[], filled=sr.filter(function(r){ return r&&r.status==="Filled"; }).length;
+    var gl=Array.isArray(b.gsas)?b.gsas:[];
+    var siWith=(Array.isArray(b.sensitive)?b.sensitive:[]).filter(function(it){ return (+it.qty||0)>0; });
+    var siOK=siWith.length?siWith.every(function(it){ return (+it.oh||0)===(+it.qty||0); }):null;
+    var siQ=siWith.reduce(function(a,it){ return a+(+it.qty||0); },0);
+    line("4. LOGISTICS");
+    line("   Supply requests: "+sr.length+" ("+filled+" filled / "+(sr.length-filled)+" open)");
+    line("   "+String(b.gsaLabel||"GSAs").toUpperCase()+": "+gl.length);
+    if(siWith.length) line("   Sensitive items: "+(siOK?"ALL ACCOUNTED ("+siQ+")":"DISCREPANCY")+(b.siCheck?" · last check "+b.siCheck:""));
+    line("");
+    line("Note: the day-by-day arc and command narrative are maintained on the TOC board.");
+    return L.join("\n");
+  }
+  function openCampAar(){ if(!state.board){ toast("Connect first — no board yet.",true); return; } $("campAarOut").textContent=campAarText(); $("campAar").classList.remove("hide"); }
+  function closeCampAar(){ $("campAar").classList.add("hide"); }
+  $("btnCampAar").addEventListener("click",openCampAar);
+  $("campAarClose").addEventListener("click",closeCampAar);
+  $("campAarCopy").addEventListener("click",function(){ copyText(campAarText(),function(){ toast("Camp AAR copied ✓"); }); });
+  $("campAarDl").addEventListener("click",function(){
+    try{ var d0=new Date(), stamp=d0.getFullYear()+pad(d0.getMonth()+1)+pad(d0.getDate())+"-"+pad(d0.getHours())+pad(d0.getMinutes());
+      var safe=((state.board&&state.board.campName)||"camp").replace(/[^a-z0-9]+/gi,"-").replace(/^-+|-+$/g,"").toLowerCase()||"camp";
+      var blob=new Blob([campAarText()],{type:"text/plain"}), a=document.createElement("a");
+      a.href=URL.createObjectURL(blob); a.download=safe+"-CAMP-AAR-"+stamp+".txt"; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },0);
+    }catch(e){ toast("Download failed — try Copy.",true); }
+  });
+  $("encList").addEventListener("click",function(e){ var b=e.target&&(e.target.classList.contains("nt-del")?e.target:null); if(!b) return;
+    var id=b.getAttribute("data-encdel"); saveEnc(loadEnc().filter(function(n){ return n.id!==id; })); renderEnc(); });
+
+  // ---------- setup / settings ----------
+  function openSetup(first){
+    $("setUrl").value=state.url||""; $("setName").value=medicName||""; $("setLead").value=isLead?"1":"0";
+    $("setupTitle").textContent=first?"Medic Dashboard — setup":"Settings";
+    $("setCancel").style.display=first?"none":"";
+    $("setup").classList.remove("hide");
+  }
+  function closeSetup(){ $("setup").classList.add("hide"); }
+  $("setSave").addEventListener("click",function(){
+    var url=$("setUrl").value.trim();
+    if(!/^https?:\/\/.+/.test(url)){ $("setUrl").focus(); $("setUrl").style.borderColor="var(--red)"; return; }
+    try{ localStorage.setItem(LS_URL,url); localStorage.setItem(LS_NAME,$("setName").value.trim()); localStorage.setItem(LS_LEAD,$("setLead").value==="1"?"1":"0"); }catch(e){}
+    closeSetup(); connect();
+  });
+  $("setCancel").addEventListener("click",closeSetup);
+  $("btnSettings").addEventListener("click",function(){
+    // ask for notification permission opportunistically when opening settings
+    if(("Notification" in window) && Notification.permission==="default"){ try{ Notification.requestPermission().then(function(p){ if(p==="granted"){ try{ localStorage.setItem(LS_NOTIFY,"1"); }catch(e){} } }); }catch(e){} }
+    openSetup(false);
+  });
+
+  // ---------- render ----------
+  function render(){
+    var b=state.board;
+    if(b&&b.campName) $("hCamp").textContent=String(b.campName).toUpperCase();
+    setStatus();
+    var form=b&&b.psgFormUrl?String(b.psgFormUrl).trim():"";
+    var fb2=$("btnForm"); if(form){ fb2.href=form; fb2.classList.remove("disabled"); } else { fb2.removeAttribute("href"); fb2.classList.add("disabled"); }
+    renderReqs(); renderHeat(); renderPlan();
+    var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); $("updated").textContent="updated "+pad(c.h)+":"+pad(c.m)+" CT";
+    checkPaging();
+    if(!$("setup").classList.contains("hide")) {} // no-op
+  }
+
+  setInterval(function(){ var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); },1000);
+
+  // pre-fill from a shared link: medic.html?sync=<exec>
+  try{ var qs=new URLSearchParams(location.search); var qSync=qs.get("sync");
+    if(qSync){ localStorage.setItem(LS_URL,qSync); history.replaceState(null,"",location.pathname); } }catch(e){}
+
+  connect();
+})();
+</script>
+</body>
+</html>

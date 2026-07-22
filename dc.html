@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101208">
+<title>D&C Judging — KYARNG Youth Camp</title>
+<style>
+  :root{
+    --bg:#101208; --panel:#1b1e16; --panel-2:#242a1c; --line:#454b38; --line-soft:#2f3426;
+    --ink:#f1f2e2; --muted:#a9b08d; --olive:#9aab52; --olive-bright:#c6dc6e;
+    --amber:#f5b62c; --green:#5fd257; --red:#f4553b; --steel:#57bde0; --black-status:#8b917a;
+    --mono:ui-monospace,"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    line-height:1.4;-webkit-text-size-adjust:100%;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:600px;margin:0 auto;padding:12px 12px 48px}
+  button,input,select{font-family:inherit;font-size:16px} button{cursor:pointer}
+  .mono{font-family:var(--mono)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 2px 12px;border-bottom:2px solid var(--olive)}
+  .h-name{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--olive-bright)}
+  .h-title{font-weight:800;font-size:20px;line-height:1.1}
+  .h-right{text-align:right}
+  .h-judge{font-family:var(--mono);font-size:13px;font-weight:700}
+  .h-stat{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+
+  .intro{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;padding:11px 13px;margin-top:12px;font-size:13px;color:var(--muted)}
+  .intro b{color:var(--ink)}
+  .grp{margin-top:18px}
+  .grp-h{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--olive-bright);font-weight:800;border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:4px}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;margin-top:12px}
+  .card.done{border-color:var(--green)}
+  .plt-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .plt-n{font-weight:800;font-size:18px}
+  .plt-total{font-family:var(--mono);font-weight:800;font-size:20px;color:var(--olive-bright);white-space:nowrap}
+  .plt-total small{font-size:11px;color:var(--muted);font-weight:700}
+
+  .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px;font-weight:800}
+  .moves{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .mv{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;padding:9px 10px;font-size:14px;user-select:none}
+  .mv input{width:18px;height:18px;flex:none;accent-color:var(--olive)}
+  .mv.on{border-color:var(--olive);background:#20261a}
+  .mv-count{font-family:var(--mono);font-size:12px;color:var(--muted);font-weight:700;margin-left:6px}
+
+  .rate{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+  .rate .rl{font-size:14px;font-weight:600}
+  .rate .rl small{display:block;font-size:11px;color:var(--muted);font-weight:400}
+  .dots{display:flex;gap:6px}
+  .dot5{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--muted);font-family:var(--mono);font-weight:800;font-size:15px}
+  .dot5.on{background:var(--olive);color:#12140f;border-color:var(--olive-bright)}
+
+  .chk{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:14px}
+  .chk input{width:20px;height:20px;accent-color:var(--olive)}
+  .timerow{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+  .timerow label{font-size:14px;font-weight:600;min-width:96px}
+  .timerow input.t{width:88px;text-align:center;font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line-soft);color:var(--ink);border-radius:8px;padding:8px}
+  .timerow input.d{width:64px;text-align:center;font-family:var(--mono);background:var(--panel-2);border:1px solid var(--line-soft);color:var(--ink);border-radius:8px;padding:8px}
+  .pen{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .pen.warn{color:var(--amber)}
+
+  .submit{margin-top:12px;width:100%;min-height:50px;border:none;border-radius:10px;background:var(--olive);color:#12140f;font-weight:800;font-size:16px;letter-spacing:.02em}
+  .submit.sent{background:#16391f;color:#cdeccd;border:1px solid var(--green)}
+  .sub-note{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center;margin-top:6px}
+
+  .foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .foot button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 11px;min-height:40px}
+
+  /* setup sheet */
+  .sheet{position:fixed;inset:0;background:rgba(6,8,4,.92);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60}
+  .sheet[hidden]{display:none}
+  .sheet-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:440px;width:100%;padding:18px}
+  .sheet-card h2{margin:0 0 4px;font-size:19px}
+  .sheet-card p{color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 12px}
+  .sheet-card label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+  .sheet-card input{width:100%;background:var(--panel-2);border:1px solid var(--line-soft);color:var(--ink);border-radius:8px;padding:11px 12px}
+  .sheet-card .go{margin-top:16px;width:100%;min-height:50px;border:none;border-radius:10px;background:var(--olive);color:#12140f;font-weight:800;font-size:16px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0d1207;border:1px solid var(--green);color:#dff3df;padding:11px 16px;border-radius:10px;font-size:14px;font-weight:600;z-index:70;max-width:90%;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .toast[hidden]{display:none} .toast.warn{border-color:var(--amber);color:#f6e2b6}
+  /* cadences */
+  .cad-note{font-size:13px;color:var(--muted);margin-bottom:6px}
+  .cad-g{margin-top:10px}
+  .cad-gh{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--olive-bright);font-weight:800;margin-bottom:4px}
+  .cad-row{display:flex;align-items:center;gap:10px;margin:6px 0}
+  .cad-row span{font-size:14px;font-weight:700;min-width:74px}
+  .cad-row select{flex:1;background:var(--panel-2);border:1px solid var(--line-soft);color:var(--ink);border-radius:8px;padding:10px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header>
+    <div>
+      <div class="h-name">KYARNG Youth Camp</div>
+      <div class="h-title">D&amp;C Judging</div>
+    </div>
+    <div class="h-right">
+      <div class="h-judge" id="hJudge">—</div>
+      <div class="h-stat" id="hStat">not submitted</div>
+    </div>
+  </header>
+
+  <div class="intro">
+    Score each platoon as it performs, then tap <b>Submit</b> on that card. You can re-submit to update a score.
+    <b>Movements</b> = 1 pt each (check what they did) · <b>Precision / Difficulty / Originality</b> 1–5 ·
+    <b>+2</b> if all commands were given by a Camper · <b>−1 per full minute over 4:00</b>. Your scores go straight to the TOC tally — you won't see the other judges' scores here.
+  </div>
+
+  <div id="groups"></div>
+  <div class="grp" id="cadence"></div>
+
+  <div class="foot">
+    <span id="fJudge">—</span>
+    <span><button id="btnSetup">Change name</button></span>
+  </div>
+</div>
+
+<div class="sheet" id="setup" hidden>
+  <div class="sheet-card">
+    <h2>D&amp;C Judging</h2>
+    <p>Enter your name so your scores are labeled on the TOC tally. Your device remembers it.</p>
+    <label for="inJudge">Judge name</label>
+    <input id="inJudge" placeholder="e.g. SFC Rivera" autocomplete="off">
+    <div id="urlWrap" hidden>
+      <label for="inUrl">Sync link (from the TOC)</label>
+      <input id="inUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
+    </div>
+    <button class="go" id="setupGo">Start judging</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var LS_JUDGE="kyarng-dc-judge", LS_URL="kyarng-dc-url", LS_SCORES="kyarng-dc-scores", LS_OUTBOX="kyarng-dc-outbox", LS_CAD="kyarng-dc-cadence";
+
+  var FACING=["Fall In","Present Arms","Order Arms","Right Face","Left Face","About Face","Right Step","Left Step","Fall Out"];
+  var MARCHING=["Forward March","Column Right","Column Left","Right Flank","Left Flank","Rear March","Counter Column","Cadence"];
+  var MOVES=FACING.concat(MARCHING); // 17 total
+  var GROUPS=[
+    {n:1, platoons:["Alpha Smurfs","Red Bandits","Maroon Typhoons","Foxtrot Fairies"]},
+    {n:2, platoons:["Ninja Turtles","Cutie Patooties","G-Flex","Pink Power Rangers","Camp Loucon"]}
+  ];
+  var RATE=[["precision","Precision of marching"],["difficulty","Degree of difficulty"],["originality","Originality"]];
+  // Cadences: a Best + Loudest vote per group (8 youth platoons only — no Camp Loucon).
+  var CADENCE_GROUPS=[
+    {n:1, platoons:["Alpha Smurfs","Red Bandits","Maroon Typhoons","Foxtrot Fairies"]},
+    {n:2, platoons:["Ninja Turtles","Cutie Patooties","G-Flex","Pink Power Rangers"]}
+  ];
+
+  function slug(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,""); }
+  function recId(judge,platoon){ return "dc-"+slug(judge)+"-"+slug(platoon); }
+
+  var state={ judge:"", url:"", scores:{}, cadence:{best:{},loudest:{},sent:false} };
+  try{ state.judge=localStorage.getItem(LS_JUDGE)||""; }catch(e){}
+  try{ state.url=localStorage.getItem(LS_URL)||""; }catch(e){}
+  try{ state.scores=JSON.parse(localStorage.getItem(LS_SCORES)||"{}")||{}; }catch(e){ state.scores={}; }
+  try{ var cd=JSON.parse(localStorage.getItem(LS_CAD)||"null"); if(cd&&typeof cd==="object") state.cadence={best:cd.best||{},loudest:cd.loudest||{},sent:!!cd.sent}; }catch(e){}
+  // URL params: ?sync=<url>&judge=<name>
+  try{ var qs=new URLSearchParams(location.search); var qSync=qs.get("sync"), qJ=qs.get("judge");
+    if(qSync){ state.url=qSync; try{ localStorage.setItem(LS_URL,state.url); }catch(e){} }
+    if(qJ && !state.judge){ state.judge=qJ; }
+  }catch(e){}
+
+  function saveScores(){ try{ localStorage.setItem(LS_SCORES, JSON.stringify(state.scores)); }catch(e){} }
+  function saveCadence(){ try{ localStorage.setItem(LS_CAD, JSON.stringify(state.cadence)); }catch(e){} }
+  function sc(platoon){ if(!state.scores[platoon]) state.scores[platoon]={moves:{},precision:0,difficulty:0,originality:0,camper:false,time:"",deduct:0,sent:false}; return state.scores[platoon]; }
+
+  function parseTime(t){ // "m:ss" or "mm:ss" -> seconds, or plain seconds/minutes
+    t=String(t||"").trim(); if(!t) return null;
+    var m=t.match(/^(\d{1,2}):(\d{1,2})$/); if(m) return (+m[1])*60+(+m[2]);
+    if(/^\d+$/.test(t)) return +t*60>=0? +t*60 : null; // bare number = minutes
+    return null;
+  }
+  function autoDeduct(t){ var s=parseTime(t); if(s==null) return 0; var over=Math.max(0,s-240); return Math.floor(over/60); }
+  function movesCount(platoon){ var mv=sc(platoon).moves||{}, n=0; for(var k in mv){ if(mv[k]) n++; } return Math.min(17,n); }
+  function total(platoon){ var s=sc(platoon);
+    var t=movesCount(platoon)+(+s.precision||0)+(+s.difficulty||0)+(+s.originality||0)+(s.camper?2:0)-(+s.deduct||0);
+    return Math.max(0,t);
+  }
+
+  // ---------- outbox (submit-only: POST a partial board with just our score record) ----------
+  function loadOutbox(){ try{ var a=JSON.parse(localStorage.getItem(LS_OUTBOX)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveOutbox(a){ try{ localStorage.setItem(LS_OUTBOX, JSON.stringify(a||[])); }catch(e){} }
+  function buildRecord(platoon){
+    var s=sc(platoon), g=groupOf(platoon);
+    var moves=[]; for(var i=0;i<MOVES.length;i++){ if(s.moves[MOVES[i]]) moves.push(MOVES[i]); }
+    return { id:recId(state.judge,platoon), judge:state.judge, platoon:platoon, group:g,
+      moves:moves, movesN:movesCount(platoon),
+      precision:+s.precision||0, difficulty:+s.difficulty||0, originality:+s.originality||0,
+      camper:!!s.camper, time:String(s.time||""), deduct:+s.deduct||0, total:total(platoon), _m:Date.now() };
+  }
+  function groupOf(platoon){ for(var i=0;i<GROUPS.length;i++){ if(GROUPS[i].platoons.indexOf(platoon)>-1) return GROUPS[i].n; } return 0; }
+  function submit(platoon){
+    if(!state.judge){ openSetup(); return; }
+    if(!state.url){ toast("No sync link — open the link the TOC gave you.",true); return; }
+    var rec=buildRecord(platoon);
+    var board={ dcScores:[rec], _by:"dc:"+slug(state.judge), _ts:Date.now(), _m:{} };
+    var a=loadOutbox().filter(function(x){ return x.id!==rec.id; }); // newest submission for this platoon wins
+    a.push({ id:rec.id, platoon:platoon, board:board, tries:0 });
+    if(a.length>40) a=a.slice(a.length-40);
+    saveOutbox(a);
+    sc(platoon).sent=true; saveScores();
+    flush();
+    renderCard(platoon); setStat();
+  }
+  function submitCadence(){
+    if(!state.judge){ openSetup(); return; }
+    if(!state.url){ toast("No sync link — open the link the TOC gave you.",true); return; }
+    var id="dccad-"+slug(state.judge);
+    var rec={ id:id, kind:"cadence", judge:state.judge, best:state.cadence.best||{}, loudest:state.cadence.loudest||{}, _m:Date.now() };
+    var board={ dcScores:[rec], _by:"dc:"+slug(state.judge), _ts:Date.now(), _m:{} };
+    var a=loadOutbox().filter(function(x){ return x.id!==id; });
+    a.push({ id:id, platoon:"Cadence votes", board:board, tries:0 });
+    if(a.length>40) a=a.slice(a.length-40);
+    saveOutbox(a);
+    state.cadence.sent=true; saveCadence();
+    flush(); renderCadence(); setStat();
+  }
+  var flushing=false, flushTimer=null;
+  function flush(){
+    clearTimeout(flushTimer); flushTimer=null;
+    if(flushing||!state.url) return;
+    var a=loadOutbox(); if(!a.length){ setStat(); return; }
+    flushing=true; var item=a[0];
+    fetch(state.url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(item.board)})
+      .then(function(){ flushing=false;
+        var cur=loadOutbox().filter(function(x){ return x.id!==item.id; }); saveOutbox(cur);
+        toast((item.platoon||"Score")+" sent to TOC ✓");
+        setStat(); if(cur.length) flush();
+      })
+      .catch(function(){ flushing=false;
+        var cur=loadOutbox(); if(cur[0]&&cur[0].id===item.id) cur[0].tries=(cur[0].tries||0)+1; saveOutbox(cur);
+        if(cur[0]&&cur[0].tries===1) toast((item.platoon||"Score")+" saved — no signal, retrying",true);
+        setStat();
+        var t=cur[0]?cur[0].tries:1;
+        flushTimer=setTimeout(flush, Math.min(30000, 2000*Math.pow(2,Math.min(4,t))));
+      });
+  }
+  function setStat(){
+    var pending=loadOutbox().length;
+    var sent=0, plt=allPlatoons(); plt.forEach(function(p){ if(sc(p).sent) sent++; });
+    $("hStat").textContent = pending? (pending+" sending…") : (sent? (sent+" / "+plt.length+" submitted") : "not submitted");
+  }
+  function allPlatoons(){ var o=[]; GROUPS.forEach(function(g){ g.platoons.forEach(function(p){ o.push(p); }); }); return o; }
+
+  // ---------- toast ----------
+  var toastT=null;
+  function toast(msg,warn){ var el=$("toast"); el.textContent=msg; el.className="toast"+(warn?" warn":""); el.hidden=false; clearTimeout(toastT); toastT=setTimeout(function(){ el.hidden=true; },2600); }
+
+  // ---------- render ----------
+  function render(){
+    $("hJudge").textContent=state.judge||"—";
+    $("fJudge").textContent=state.judge? ("Judge: "+state.judge) : "—";
+    var box=$("groups"); box.innerHTML="";
+    GROUPS.forEach(function(g){
+      var gd=document.createElement("div"); gd.className="grp";
+      gd.innerHTML='<div class="grp-h">'+esc(g.label||("Group "+g.n))+'</div>';
+      g.platoons.forEach(function(p){
+        var card=document.createElement("div"); card.className="card"; card.id="card-"+slug(p); card.setAttribute("data-plt",p);
+        gd.appendChild(card);
+      });
+      box.appendChild(gd);
+    });
+    allPlatoons().forEach(renderCard);
+    renderCadence();
+    setStat();
+  }
+  function renderCadence(){
+    var box=$("cadence"); if(!box) return;
+    var c=state.cadence||{best:{},loudest:{}};
+    var opts=function(list,sel){ var o='<option value="">— pick —</option>'; list.forEach(function(p){ o+='<option value="'+esc(p)+'"'+(sel===p?' selected':'')+'>'+esc(p)+'</option>'; }); return o; };
+    var h='<div class="grp-h">Cadences &mdash; vote</div>';
+    h+='<div class="card" id="cadCard"><div class="cad-note">Pick the <b>Best</b> and <b>Loudest</b> cadence in each group. One vote each &mdash; the TOC tallies the votes.</div>';
+    CADENCE_GROUPS.forEach(function(g){
+      h+='<div class="cad-g"><div class="cad-gh">Group '+g.n+'</div>';
+      h+='<label class="cad-row"><span>Best</span><select data-cad="best" data-g="'+g.n+'">'+opts(g.platoons, (c.best||{})[g.n])+'</select></label>';
+      h+='<label class="cad-row"><span>Loudest</span><select data-cad="loudest" data-g="'+g.n+'">'+opts(g.platoons, (c.loudest||{})[g.n])+'</select></label>';
+      h+='</div>';
+    });
+    h+='<button class="submit'+(c.sent?' sent':'')+'" id="cadSubmit">'+(c.sent?'✓ Votes submitted — tap to update':'Submit cadence votes')+'</button></div>';
+    box.innerHTML=h;
+  }
+  function renderCard(platoon){
+    var card=$("card-"+slug(platoon)); if(!card) return;
+    var s=sc(platoon);
+    var h='';
+    h+='<div class="plt-h"><div class="plt-n">'+esc(platoon)+'</div><div class="plt-total" id="tot-'+slug(platoon)+'">'+total(platoon)+' <small>pts</small></div></div>';
+    // movements
+    h+='<div class="k">Movements <span class="mv-count" id="mvc-'+slug(platoon)+'">'+movesCount(platoon)+' / 17</span></div>';
+    h+='<div class="moves">';
+    MOVES.forEach(function(mv){ var on=!!s.moves[mv];
+      h+='<label class="mv'+(on?' on':'')+'"><input type="checkbox" data-mv="'+esc(mv)+'"'+(on?' checked':'')+'>'+esc(mv)+'</label>';
+    });
+    h+='</div>';
+    // ratings
+    RATE.forEach(function(r){ var key=r[0], val=+s[key]||0;
+      h+='<div class="rate"><div class="rl">'+esc(r[1])+'<small>1–5</small></div><div class="dots" data-rate="'+key+'">';
+      for(var i=1;i<=5;i++) h+='<button type="button" class="dot5'+(val===i?' on':'')+'" data-v="'+i+'">'+i+'</button>';
+      h+='</div></div>';
+    });
+    // camper bonus
+    h+='<label class="chk"><input type="checkbox" data-camper'+(s.camper?' checked':'')+'> All commands given by a <b>Camper</b> (+2)</label>';
+    // time
+    var s2=parseTime(s.time), over=s2==null?0:Math.max(0,s2-240);
+    var penTxt = s2==null? "enter time" : (over>0? ("+"+fmtT(over)+" over → −"+(+s.deduct||0)) : "within 4:00");
+    h+='<div class="timerow"><label>Time (m:ss)</label><input class="t" data-time value="'+esc(s.time||"")+'" placeholder="3:45" inputmode="numeric">'+
+       '<label style="min-width:auto">Penalty −</label><input class="d" data-deduct value="'+(+s.deduct||0)+'" inputmode="numeric">'+
+       '<span class="pen'+(over>0?' warn':'')+'" id="pen-'+slug(platoon)+'">'+penTxt+'</span></div>';
+    // submit
+    h+='<button class="submit'+(s.sent?' sent':'')+'" data-submit>'+(s.sent?'✓ Submitted — tap to update':'Submit '+esc(platoon))+'</button>';
+    card.className="card"+(s.sent?" done":"");
+    card.innerHTML=h;
+  }
+  function fmtT(sec){ var m=Math.floor(sec/60), s=sec%60; return m+":"+(s<10?"0":"")+s; }
+  function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  // ---------- interactions (event delegation) ----------
+  $("groups").addEventListener("change", function(e){
+    var t=e.target, card=t.closest?t.closest(".card"):null; if(!card) return; var platoon=card.getAttribute("data-plt"); var s=sc(platoon);
+    if(t.hasAttribute&&t.hasAttribute("data-mv")){ s.moves[t.getAttribute("data-mv")]=t.checked; s.sent=false; saveScores(); refreshTotals(platoon); t.parentNode.classList.toggle("on",t.checked); markUnsent(platoon); return; }
+    if(t.hasAttribute&&t.hasAttribute("data-camper")){ s.camper=t.checked; s.sent=false; saveScores(); refreshTotals(platoon); markUnsent(platoon); return; }
+  });
+  $("groups").addEventListener("input", function(e){
+    var t=e.target, card=t.closest?t.closest(".card"):null; if(!card) return; var platoon=card.getAttribute("data-plt"); var s=sc(platoon);
+    if(t.hasAttribute&&t.hasAttribute("data-time")){ s.time=t.value; s.deduct=autoDeduct(t.value); s.sent=false; saveScores();
+      var d=card.querySelector("[data-deduct]"); if(d) d.value=s.deduct; refreshTotals(platoon); refreshPen(platoon); markUnsent(platoon); return; }
+    if(t.hasAttribute&&t.hasAttribute("data-deduct")){ s.deduct=Math.max(0,parseInt(t.value||"0",10)||0); s.sent=false; saveScores(); refreshTotals(platoon); refreshPen(platoon); markUnsent(platoon); return; }
+  });
+  $("groups").addEventListener("click", function(e){
+    var t=e.target, card=t.closest?t.closest(".card"):null; if(!card) return; var platoon=card.getAttribute("data-plt"); var s=sc(platoon);
+    var dot=t.closest?t.closest(".dot5"):null;
+    if(dot){ var wrap=dot.parentNode, key=wrap.getAttribute("data-rate"), v=+dot.getAttribute("data-v");
+      s[key]=(+s[key]===v)?0:v; s.sent=false; saveScores();
+      Array.prototype.forEach.call(wrap.children,function(b){ b.classList.toggle("on", +b.getAttribute("data-v")===(+s[key])); });
+      refreshTotals(platoon); markUnsent(platoon); return; }
+    if(t.hasAttribute&&t.hasAttribute("data-submit")){ submit(platoon); return; }
+  });
+  // cadence votes
+  $("cadence").addEventListener("change", function(e){
+    var t=e.target; if(!t.hasAttribute||!t.hasAttribute("data-cad")) return;
+    var kind=t.getAttribute("data-cad"), g=t.getAttribute("data-g");
+    if(!state.cadence[kind]) state.cadence[kind]={};
+    state.cadence[kind][g]=t.value; state.cadence.sent=false; saveCadence();
+    var btn=$("cadSubmit"); if(btn){ btn.className="submit"; btn.textContent="Submit cadence votes"; }
+  });
+  $("cadence").addEventListener("click", function(e){
+    if(e.target && e.target.id==="cadSubmit") submitCadence();
+  });
+  function refreshTotals(platoon){ var tot=$("tot-"+slug(platoon)); if(tot) tot.innerHTML=total(platoon)+' <small>pts</small>';
+    var mvc=$("mvc-"+slug(platoon)); if(mvc) mvc.textContent=movesCount(platoon)+" / 17"; }
+  function refreshPen(platoon){ var s=sc(platoon), s2=parseTime(s.time), over=s2==null?0:Math.max(0,s2-240);
+    var pen=$("pen-"+slug(platoon)); if(pen){ pen.textContent = s2==null?"enter time":(over>0?("+"+fmtT(over)+" over → −"+(+s.deduct||0)):"within 4:00"); pen.className="pen"+(over>0?" warn":""); } }
+  function markUnsent(platoon){ var card=$("card-"+slug(platoon)); if(!card) return; var btn=card.querySelector("[data-submit]");
+    if(btn){ btn.className="submit"; btn.textContent="Submit "+platoon; } card.className="card"; setStat(); }
+
+  // ---------- setup ----------
+  function openSetup(){ $("inJudge").value=state.judge||""; $("urlWrap").hidden=!!state.url; if(!state.url) $("inUrl").value=""; $("setup").hidden=false; setTimeout(function(){ $("inJudge").focus(); },50); }
+  function closeSetup(){ $("setup").hidden=true; }
+  $("setupGo").addEventListener("click", function(){
+    var nm=$("inJudge").value.trim(); if(!nm){ $("inJudge").focus(); return; }
+    state.judge=nm; try{ localStorage.setItem(LS_JUDGE,nm); }catch(e){}
+    if(!state.url){ var u=$("inUrl").value.trim(); if(u){ state.url=u; try{ localStorage.setItem(LS_URL,u); }catch(e){} } }
+    closeSetup(); render();
+  });
+  $("btnSetup").addEventListener("click", openSetup);
+
+  // ---------- boot ----------
+  render();
+  if(!state.judge) openSetup();
+  flush(); // drain any queued submissions from a previous session
+  setInterval(flush, 15000);
+})();
+</script>
+</body>
+</html>

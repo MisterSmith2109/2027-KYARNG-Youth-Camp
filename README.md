@@ -25,7 +25,7 @@ shared board (TOC, PSG phones, Medic dashboard) now runs a freshness contract:
 
 **When you deploy an update:** bump the version string in `version.json` *and*
 the matching `APP_VERSION` constant near the bottom of `index.html`,
-`psg.html`, `medic.html`, and `dc.html`. Phones already in the field will see
+`psg.html`, `medic.html`, `dc.html`, `command.html`, and `sw.js`. Phones already in the field will see
 the update bar within 5 minutes (or the next time the page is opened).
 
 Also new for 2027:
@@ -67,6 +67,18 @@ Also new for 2027:
   reports. Camp-wide, provable accountability in minutes, with the drill time
   on record. Medic phones are exempt (drills are platoon business). Rides the
   FLASH channel — no extra backend deployment beyond the FLASH one.
+- **📱 Install as an app (PWA)** — every role page can now be installed to a
+  phone's home screen with its own icon: **Camp TOC**, **Camp PSG** (olive),
+  **Camp Medic** (red), **Camp CMD** (steel). Installed pages launch
+  full-screen like a native app, and a **service worker keeps the app shell
+  working with zero signal** — the page opens instantly in the field even
+  offline, showing its cached board with the honest OFFLINE banner. The
+  worker is strictly **network-first**: with any signal, the newest deployed
+  page always wins, so it can never undercut the freshness contract or the
+  tap-to-update flow. On iPhone, installing also makes lock-screen alerts
+  (FLASH, medic pages, event heads-ups) work by default.
+  *Deploy note:* `sw.js` carries the same `APP_VERSION` constant as the pages
+  — bump it with the rest on each deploy.
 - **Command Team view (`command.html`)** — a read-only phone/tablet page for
   the command team and staff, replacing the old "Lifeline" pseudo-platoon on
   the PSG page. One screen shows the whole camp live: **accountability by

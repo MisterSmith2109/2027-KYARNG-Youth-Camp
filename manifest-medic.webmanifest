@@ -1,0 +1,14 @@
+{
+  "name": "Camp Medic Dashboard",
+  "short_name": "Camp Medic",
+  "start_url": "./medic.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12140e",
+  "theme_color": "#12140e",
+  "icons": [
+    { "src": "icons/medic-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/medic-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

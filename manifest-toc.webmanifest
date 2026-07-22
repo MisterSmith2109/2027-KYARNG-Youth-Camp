@@ -1,0 +1,14 @@
+{
+  "name": "Camp TOC Board",
+  "short_name": "Camp TOC",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12140e",
+  "theme_color": "#12140e",
+  "icons": [
+    { "src": "icons/toc-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/toc-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

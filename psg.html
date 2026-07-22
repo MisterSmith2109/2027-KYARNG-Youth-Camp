@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12140e">
 <title>PSG Field View — KYARNG Youth Camp</title>
+<link rel="manifest" href="manifest-psg.webmanifest">
+<link rel="apple-touch-icon" href="icons/psg-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Camp PSG">
 <style>
   :root{
     --bg:#101208; --panel:#1b1e16; --panel-2:#242a1c; --line:#454b38; --line-soft:#2f3426;
@@ -1678,7 +1684,7 @@
 // update" bar appears and the tap does a cache-busted reload of the newest version.
 // (Fails silently when the board is run from a local file with no server.)
 (function(){
-  var APP_VERSION="2027.7"; // keep in step with version.json on each deploy
+  var APP_VERSION="2027.8"; // keep in step with version.json on each deploy
   try{ if(/[?&]u=\d/.test(location.search)){ var q=location.search.replace(/([?&])u=\d+&?/,"$1").replace(/[?&]+$/,""); history.replaceState(null,"",location.pathname+q+location.hash); } }catch(e){}
   var bar=null;
   function show(){ if(bar) return;
@@ -1699,6 +1705,12 @@
   check(); setInterval(check,300000); // on load, then every 5 minutes
   document.addEventListener("visibilitychange",function(){ if(!document.hidden) check(); });
 })();
+</script>
+<script>
+// Register the offline app shell (network-first; no-op when opened as a local file)
+if("serviceWorker" in navigator && location.protocol!=="file:"){
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
 </script>
 </body>
 </html>
